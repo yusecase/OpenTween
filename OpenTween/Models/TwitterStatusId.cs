@@ -22,10 +22,6 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace OpenTween.Models
 {
@@ -36,7 +32,7 @@ namespace OpenTween.Models
         public override string Id { get; }
 
         public TwitterStatusId(string id)
-            => this.Id = id;
+            => this.Id = id ?? throw new ArgumentNullException(nameof(id));
 
         public TwitterStatusId(long id)
             => this.Id = id.ToString();

@@ -61,6 +61,42 @@ namespace OpenTween.Properties {
         }
         
         /// <summary>
+        ///   メインに設定できるのはTwitterアカウントのみです に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AccountListBox_MakePrimaryError {
+            get {
+                return ResourceManager.GetString("AccountListBox_MakePrimaryError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   (無効) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AccountListBoxItem_Disabled {
+            get {
+                return ResourceManager.GetString("AccountListBoxItem_Disabled", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   (メイン) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AccountListBoxItem_Primary {
+            get {
+                return ResourceManager.GetString("AccountListBoxItem_Primary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   この機能は現在のアカウントでは使用できません に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AccountTypeErrorText {
+            get {
+                return ResourceManager.GetString("AccountTypeErrorText", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   発言一覧 に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string AddNewTab_ListView_AccessibleName {
@@ -580,18 +616,20 @@ namespace OpenTween.Properties {
         /// <summary>
         ///   更新履歴
         ///
-        ///==== Ver 3.13.0(2024/01/27)
-        /// * NEW: Cookie使用時のReplyタブの更新に対応（/statuses/mentions_timeline.json 廃止に伴う対応）
-        /// * NEW: Cookie使用時のFavoritesタブの更新に対応
-        /// * NEW: Cookie使用時のFav追加・削除に対応
-        /// * NEW: ステータスバーに各タブの更新回数（起動時からの回数）の表示を追加
-        /// * NEW: 設定画面の更新間隔ページに24時間分の取得回数目安の表示を追加
-        /// * CHG: 更新間隔の初期設定を変更
-        /// * FIX: Cookie使用時にツイート検索の言語指定が効かない不具合を修正
-        /// * FIX: ツイート検索のキーワードを後から変更すると検索結果が表示されない不具合を修正
-        /// * FIX: Cookie使用時にステータスバーにRecentタブのレートリミットが表示されない不具合を修正
-        /// * FIX: 取得したツイートの中身が空だった場合のエラー処理を改善
-        /// * FIX: タイムラインの取得結果にレートリミットに関するメッセージが含まれていた [残りの文字列は切り詰められました]&quot;; に類似しているローカライズされた文字列を検索します。
+        ///==== Ver 3.14.0(2024/06/11)
+        /// * NEW: メインアカウント以外のホームタイムライン表示に対応
+        ///   - タブ単位で切り替わるマルチアカウント機能です
+        ///   - 投稿欄やふぁぼ・RT等の機能も表示中のタブに連動して使用するアカウントが変わります
+        ///   - 現時点ではメインアカウント以外のタブ設定は次回起動時に保持されません
+        /// * NEW: Misskeyアカウントのホームタイムライン表示・投稿に対応しました
+        ///   - 現時点では Misskey アカウントをメインに設定することはできません
+        ///   - MFMの表示には対応していません
+        /// * NEW: Twemoji 15.1.0 に対応しました
+        ///   - Unicode 15.1 で追加された絵文字が表示されるようになります
+        /// * NEW: WebP画像の表示に対応しました
+        ///   - プロフィール画像やサムネイル画像にWebPが使われている場合も表示が可能になります
+        ///   - 「WebP画像拡張機能」がインストールされている環境でのみ動作します
+        /// * CHG: 設定画面でのアカウント一覧の表 [残りの文字列は切り詰められました]&quot;; に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ChangeLog {
             get {
@@ -2046,15 +2084,6 @@ namespace OpenTween.Properties {
         }
         
         /// <summary>
-        ///   Direct Messageの送受信をするため、もう一度認証処理をして下さい。 に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string ReAuthorizeText {
-            get {
-                return ResourceManager.GetString("ReAuthorizeText", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   (アイコン) に類似した型 System.Drawing.Icon のローカライズされたリソースを検索します。
         /// </summary>
         internal static System.Drawing.Icon Refresh {
@@ -2091,6 +2120,33 @@ namespace OpenTween.Properties {
             get {
                 object obj = ResourceManager.GetObject("Refresh4", resourceCulture);
                 return ((System.Drawing.Icon)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Configuration取得エラー : に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string RefreshConfiguration_Error {
+            get {
+                return ResourceManager.GetString("RefreshConfiguration_Error", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Configuration取得中... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string RefreshConfiguration_Start {
+            get {
+                return ResourceManager.GetString("RefreshConfiguration_Start", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Configuration取得完了 に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string RefreshConfiguration_Success {
+            get {
+                return ResourceManager.GetString("RefreshConfiguration_Success", resourceCulture);
             }
         }
         
@@ -2592,7 +2648,7 @@ namespace OpenTween.Properties {
         }
         
         /// <summary>
-        ///   「認証開始」ボタンを押すとブラウザが開きます。「連携アプリを認証」し、表示されたPINを画面上部に入力後、「Finish」ボタンを押してください。認証せずに終了してもよろしいですか？ に類似しているローカライズされた文字列を検索します。
+        ///   メインのアカウントが設定されていません。このまま終了してもよろしいですか？ に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Setting_FormClosing1 {
             get {
@@ -3167,87 +3223,6 @@ namespace OpenTween.Properties {
         internal static string UnhandledExceptionText9 {
             get {
                 return ResourceManager.GetString("UnhandledExceptionText9", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   BlockIds取得中... に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string UpdateBlockUserText1 {
-            get {
-                return ResourceManager.GetString("UpdateBlockUserText1", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   BlockIds取得エラー : に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string UpdateBlockUserText2 {
-            get {
-                return ResourceManager.GetString("UpdateBlockUserText2", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   BlockIds取得完了 に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string UpdateBlockUserText3 {
-            get {
-                return ResourceManager.GetString("UpdateBlockUserText3", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Followers取得中... に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string UpdateFollowersMenuItem1_ClickText1 {
-            get {
-                return ResourceManager.GetString("UpdateFollowersMenuItem1_ClickText1", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Followers取得エラー： に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string UpdateFollowersMenuItem1_ClickText2 {
-            get {
-                return ResourceManager.GetString("UpdateFollowersMenuItem1_ClickText2", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Followers取得完了 に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string UpdateFollowersMenuItem1_ClickText3 {
-            get {
-                return ResourceManager.GetString("UpdateFollowersMenuItem1_ClickText3", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   MuteUserIds取得エラー: {0} に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string UpdateMuteUserIds_Error {
-            get {
-                return ResourceManager.GetString("UpdateMuteUserIds_Error", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   MuteUserIds取得完了 に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string UpdateMuteUserIds_Finish {
-            get {
-                return ResourceManager.GetString("UpdateMuteUserIds_Finish", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   MuteUserIds取得中... に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string UpdateMuteUserIds_Start {
-            get {
-                return ResourceManager.GetString("UpdateMuteUserIds_Start", resourceCulture);
             }
         }
         

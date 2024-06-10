@@ -24,41 +24,51 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using OpenTween.Models;
 using OpenTween.SocialProtocol.Twitter;
 
 namespace OpenTween.SocialProtocol
 {
     public sealed class AccountCollection : IDisposable
     {
-        private Dictionary<Guid, ISocialAccount> accounts = new();
-        private Guid? primaryId;
-        private readonly ISocialAccount emptyAccount = new TwitterAccount(Guid.Empty);
+        private Dictionary<AccountKey, ISocialAccount> accounts = new();
+        private AccountKey? primaryAccountKey;
+        private readonly ISocialAccount emptyAccount = new TwitterAccount(AccountKey.Empty);
 
         public bool IsDisposed { get; private set; }
 
         public ISocialAccount Primary
-            => this.primaryId != null ? this.accounts[this.primaryId.Value] : this.emptyAccount;
+            => this.primaryAccountKey != null ? this.accounts[this.primaryAccountKey.Value] : this.emptyAccount;
 
         public ISocialAccount[] Items
             => this.accounts.Values.ToArray();
 
+        public ISocialAccount[] SecondaryAccounts
+            => this.accounts.Values.Where(x => x.UniqueKey != this.primaryAccountKey).ToArray();
+
         public void LoadFromSettings(SettingCommon settingCommon)
         {
+            var factory = new AccountFactory();
             var oldAccounts = this.accounts;
-            var newAccounts = new Dictionary<Guid, ISocialAccount>();
+            var newAccounts = new Dictionary<AccountKey, ISocialAccount>();
 
             foreach (var accountSettings in settingCommon.UserAccounts)
             {
-                var accountKey = accountSettings.UniqueKey;
-                if (!oldAccounts.TryGetValue(accountKey, out var account))
-                    account = new TwitterAccount(accountKey);
+                if (accountSettings.Disabled)
+                    continue;
 
-                account.Initialize(accountSettings, settingCommon);
+                var accountKey = new AccountKey(accountSettings.UniqueKey);
+
+                if (oldAccounts.TryGetValue(accountKey, out var account))
+                    account.Initialize(accountSettings, settingCommon);
+                else
+                    account = factory.Create(accountSettings, settingCommon);
+
                 newAccounts[accountKey] = account;
             }
 
             this.accounts = newAccounts;
-            this.primaryId = settingCommon.SelectedAccountKey;
+            this.primaryAccountKey = settingCommon.SelectedAccountKey is { } guid ? new(guid) : null;
 
             var removedAccounts = oldAccounts
                 .Where(x => !newAccounts.ContainsKey(x.Key))
@@ -82,6 +92,41 @@ namespace OpenTween.SocialProtocol
         {
             foreach (var account in accounts)
                 account.Dispose();
+        }
+
+        public ISocialAccount GetAccountForTab(TabModel tab)
+        {
+            if (tab.SourceAccountKey is { } accountKey)
+            {
+                if (this.accounts.TryGetValue(accountKey, out var account))
+                    return account;
+
+                // タブ追加後に設定画面からアカウントの情報を削除した場合
+                return new InvalidAccount(accountKey);
+            }
+
+            return this.Primary;
+        }
+
+        public ISocialAccount? GetAccountForPostId(PostId postId, AccountKey? preferedAccountKey)
+        {
+            if (preferedAccountKey != null && this.accounts.TryGetValue(preferedAccountKey.Value, out var preferedAccount))
+            {
+                if (preferedAccount.CanUsePostId(postId))
+                    return preferedAccount;
+            }
+
+            var primaryAccount = this.Primary;
+            if (primaryAccount.CanUsePostId(postId))
+                return primaryAccount;
+
+            foreach (var account in this.SecondaryAccounts)
+            {
+                if (account.CanUsePostId(postId))
+                    return account;
+            }
+
+            return null;
         }
     }
 }

@@ -42,6 +42,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using OpenTween.Models;
 using OpenTween.Setting;
+using OpenTween.SocialProtocol.Twitter;
 
 namespace OpenTween
 {
@@ -278,18 +279,21 @@ namespace OpenTween
             this.ClearUserPicture();
 
             var imageSize = Twitter.DecideProfileImageSize(this.UserPicture.Width);
-            var cachedImage = this.IconCache.TryGetLargerOrSameSizeFromCache(normalImageUrl, imageSize);
-            if (cachedImage != null)
+            if (!force)
             {
-                // 既にキャッシュされていればそれを表示して終了
-                this.UserPicture.Image = cachedImage.Clone();
-                return;
-            }
+                var cachedImage = this.IconCache.TryGetLargerOrSameSizeFromCache(normalImageUrl, imageSize);
+                if (cachedImage != null)
+                {
+                    // 既にキャッシュされていればそれを表示して終了
+                    this.UserPicture.Image = cachedImage.Clone();
+                    return;
+                }
 
-            // 小さいサイズの画像がキャッシュにある場合は高解像度の画像が取得できるまでの間表示する
-            var fallbackImage = this.IconCache.TryGetLargerOrSameSizeFromCache(normalImageUrl, "mini");
-            if (fallbackImage != null)
-                this.UserPicture.Image = fallbackImage.Clone();
+                // 小さいサイズの画像がキャッシュにある場合は高解像度の画像が取得できるまでの間表示する
+                var fallbackImage = this.IconCache.TryGetLargerOrSameSizeFromCache(normalImageUrl, "mini");
+                if (fallbackImage != null)
+                    this.UserPicture.Image = fallbackImage.Clone();
+            }
 
             await this.UserPicture.SetImageFromTask(
                 async () =>
@@ -361,9 +365,13 @@ namespace OpenTween
             var post = TabInformations.GetInstance()[statusId];
             if (post == null)
             {
+                var account = this.Owner.GetAccountForPostId(statusId);
+                if (account == null)
+                    return FormatQuoteTweetHtml(statusId, "This post is unavailable.", isReply);
+
                 try
                 {
-                    post = await this.Owner.TwitterInstance.GetStatusApi(false, statusId.ToTwitterStatusId())
+                    post = await account.Client.GetPostById(statusId, firstLoad: false)
                         .ConfigureAwait(false);
                 }
                 catch (WebApiException ex)
@@ -371,7 +379,9 @@ namespace OpenTween
                     return FormatQuoteTweetHtml(statusId, WebUtility.HtmlEncode($"Err:{ex.Message}(GetStatus)"), isReply);
                 }
 
-                post.IsRead = true;
+                if (account.AccountState.BlockedUserIds.Contains(post.UserId))
+                    return FormatQuoteTweetHtml(statusId, "This Tweet is unavailable.", isReply);
+
                 if (!TabInformations.GetInstance().AddQuoteTweet(post))
                     return FormatQuoteTweetHtml(statusId, "This Tweet is unavailable.", isReply);
             }
@@ -460,7 +470,7 @@ namespace OpenTween
 
         private string? GetUserId()
         {
-            var m = Regex.Match(this.postBrowserStatusText, @"^https?://twitter.com/(#!/)?(?<ScreenName>[a-zA-Z0-9_]+)(/status(es)?/[0-9]+)?$");
+            var m = Twitter.StatusUrlRegex.Match(this.postBrowserStatusText);
             if (m.Success && this.Owner.IsTwitterId(m.Result("${ScreenName}")))
                 return m.Result("${ScreenName}");
             else
@@ -643,7 +653,7 @@ namespace OpenTween
             }
             if (this.CurrentPost != null)
             {
-                if (this.CurrentPost.UserId == this.Owner.TwitterInstance.UserId)
+                if (this.CurrentPost.UserId == this.Owner.CurrentTabAccount.UserId)
                 {
                     this.FollowToolStripMenuItem.Enabled = false;
                     this.UnFollowToolStripMenuItem.Enabled = false;
@@ -681,7 +691,7 @@ namespace OpenTween
             if (this.CurrentPost == null)
                 return;
 
-            if (this.CurrentPost.UserId == this.Owner.TwitterInstance.UserId)
+            if (this.CurrentPost.UserId == this.Owner.CurrentTabAccount.UserId)
                 return;
 
             await this.Owner.FollowCommand(this.CurrentPost.ScreenName);
@@ -692,7 +702,7 @@ namespace OpenTween
             if (this.CurrentPost == null)
                 return;
 
-            if (this.CurrentPost.UserId == this.Owner.TwitterInstance.UserId)
+            if (this.CurrentPost.UserId == this.Owner.CurrentTabAccount.UserId)
                 return;
 
             await this.Owner.RemoveCommand(this.CurrentPost.ScreenName, false);
@@ -703,7 +713,7 @@ namespace OpenTween
             if (this.CurrentPost == null)
                 return;
 
-            if (this.CurrentPost.UserId == this.Owner.TwitterInstance.UserId)
+            if (this.CurrentPost.UserId == this.Owner.CurrentTabAccount.UserId)
                 return;
 
             await this.Owner.ShowFriendship(this.CurrentPost.ScreenName);
@@ -822,7 +832,7 @@ namespace OpenTween
                     this.SearchAtPostsDetailToolStripMenuItem.Enabled = false;
                 }
 
-                if (Regex.IsMatch(this.postBrowserStatusText, @"^https?://twitter.com/search\?q=%23"))
+                if (Regex.IsMatch(this.postBrowserStatusText, @"^https?://(twitter|x).com/search\?q=%23"))
                     this.UseHashtagMenuItem.Enabled = true;
                 else
                     this.UseHashtagMenuItem.Enabled = false;
@@ -856,11 +866,11 @@ namespace OpenTween
                 this.SelectionTranslationToolStripMenuItem.Enabled = true;
             }
             // 発言内に自分以外のユーザーが含まれてればフォロー状態全表示を有効に
-            var ma = Regex.Matches(this.PostBrowser.DocumentText, @"href=""https?://twitter.com/(#!/)?(?<ScreenName>[a-zA-Z0-9_]+)(/status(es)?/[0-9]+)?""");
+            var ma = Regex.Matches(this.PostBrowser.DocumentText, @"href=""https?://(twitter|x).com/(#!/)?(?<ScreenName>[a-zA-Z0-9_]+)(/status(es)?/[0-9]+)?""");
             var fAllFlag = false;
             foreach (Match mu in ma)
             {
-                if (!mu.Result("${ScreenName}").Equals(this.Owner.TwitterInstance.Username, StringComparison.InvariantCultureIgnoreCase))
+                if (!mu.Result("${ScreenName}").Equals(this.Owner.CurrentTabAccount.UserName, StringComparison.InvariantCultureIgnoreCase))
                 {
                     fAllFlag = true;
                     break;
@@ -975,11 +985,11 @@ namespace OpenTween
 
         private async void FriendshipAllMenuItem_Click(object sender, EventArgs e)
         {
-            var ma = Regex.Matches(this.PostBrowser.DocumentText, @"href=""https?://twitter.com/(#!/)?(?<ScreenName>[a-zA-Z0-9_]+)(/status(es)?/[0-9]+)?""");
+            var ma = Regex.Matches(this.PostBrowser.DocumentText, @"href=""https?://(twitter|x).com/(#!/)?(?<ScreenName>[a-zA-Z0-9_]+)(/status(es)?/[0-9]+)?""");
             var ids = new List<string>();
             foreach (Match mu in ma)
             {
-                if (!mu.Result("${ScreenName}").Equals(this.Owner.TwitterInstance.Username, StringComparison.InvariantCultureIgnoreCase))
+                if (!mu.Result("${ScreenName}").Equals(this.Owner.CurrentTabAccount.UserName, StringComparison.InvariantCultureIgnoreCase))
                 {
                     ids.Add(mu.Result("${ScreenName}"));
                 }
@@ -1039,7 +1049,7 @@ namespace OpenTween
 
         private void UseHashtagMenuItem_Click(object sender, EventArgs e)
         {
-            var m = Regex.Match(this.postBrowserStatusText, @"^https?://twitter.com/search\?q=%23(?<hash>.+)$");
+            var m = Regex.Match(this.postBrowserStatusText, @"^https?://(twitter|x).com/search\?q=%23(?<hash>.+)$");
             if (m.Success)
                 this.Owner.SetPermanentHashtag(Uri.UnescapeDataString(m.Groups["hash"].Value));
         }
@@ -1113,14 +1123,8 @@ namespace OpenTween
 
         private async void DateTimeLabel_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            if (this.CurrentPost == null)
-                return;
-
-            if (this.CurrentPost.StatusId is not TwitterStatusId)
-                return;
-
-            var statusUrl = MyCommon.GetStatusUrl(this.CurrentPost);
-            await MyCommon.OpenInBrowserAsync(this, statusUrl);
+            if (this.CurrentPost?.PostUri is { } postUri)
+                await MyCommon.OpenInBrowserAsync(this, postUri);
         }
     }
 

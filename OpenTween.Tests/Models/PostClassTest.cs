@@ -129,10 +129,10 @@ namespace OpenTween.Models
             {
                 IsDm = true,
                 IsMe = true, // 自分が送信した DM
-                UserId = 222L, // 送信先ユーザーID
+                UserId = new TwitterUserId("222"), // 送信先ユーザーID
             };
 
-            Assert.True(post.CanDeleteBy(selfUserId: 111L));
+            Assert.True(post.CanDeleteBy(selfUserId: new TwitterUserId("111")));
         }
 
         [Fact]
@@ -142,10 +142,10 @@ namespace OpenTween.Models
             {
                 IsDm = true,
                 IsMe = false, // 自分が受け取った DM
-                UserId = 222L, // 送信元ユーザーID
+                UserId = new TwitterUserId("222"), // 送信元ユーザーID
             };
 
-            Assert.True(post.CanDeleteBy(selfUserId: 111L));
+            Assert.True(post.CanDeleteBy(selfUserId: new TwitterUserId("111")));
         }
 
         [Fact]
@@ -153,10 +153,10 @@ namespace OpenTween.Models
         {
             var post = new PostClass
             {
-                UserId = 111L, // 自分のツイート
+                UserId = new TwitterUserId("111"), // 自分のツイート
             };
 
-            Assert.True(post.CanDeleteBy(selfUserId: 111L));
+            Assert.True(post.CanDeleteBy(selfUserId: new TwitterUserId("111")));
         }
 
         [Fact]
@@ -164,10 +164,10 @@ namespace OpenTween.Models
         {
             var post = new PostClass
             {
-                UserId = 222L, // 他人のツイート
+                UserId = new TwitterUserId("222"), // 他人のツイート
             };
 
-            Assert.False(post.CanDeleteBy(selfUserId: 111L));
+            Assert.False(post.CanDeleteBy(selfUserId: new TwitterUserId("111")));
         }
 
         [Fact]
@@ -175,11 +175,11 @@ namespace OpenTween.Models
         {
             var post = new PostClass
             {
-                RetweetedByUserId = 111L, // 自分がリツイートした
-                UserId = 222L, // 他人のツイート
+                RetweetedByUserId = new TwitterUserId("111"), // 自分がリツイートした
+                UserId = new TwitterUserId("222"), // 他人のツイート
             };
 
-            Assert.True(post.CanDeleteBy(selfUserId: 111L));
+            Assert.True(post.CanDeleteBy(selfUserId: new TwitterUserId("111")));
         }
 
         [Fact]
@@ -187,11 +187,11 @@ namespace OpenTween.Models
         {
             var post = new PostClass
             {
-                RetweetedByUserId = 333L, // 他人がリツイートした
-                UserId = 222L, // 他人のツイート
+                RetweetedByUserId = new TwitterUserId("333"), // 他人がリツイートした
+                UserId = new TwitterUserId("222"), // 他人のツイート
             };
 
-            Assert.False(post.CanDeleteBy(selfUserId: 111L));
+            Assert.False(post.CanDeleteBy(selfUserId: new TwitterUserId("111")));
         }
 
         [Fact]
@@ -199,11 +199,11 @@ namespace OpenTween.Models
         {
             var post = new PostClass
             {
-                RetweetedByUserId = 222L, // 他人がリツイートした
-                UserId = 111L, // 自分のツイート
+                RetweetedByUserId = new TwitterUserId("222"), // 他人がリツイートした
+                UserId = new TwitterUserId("111"), // 自分のツイート
             };
 
-            Assert.True(post.CanDeleteBy(selfUserId: 111L));
+            Assert.True(post.CanDeleteBy(selfUserId: new TwitterUserId("111")));
         }
 
         [Fact]
@@ -213,10 +213,10 @@ namespace OpenTween.Models
             {
                 IsDm = true,
                 IsMe = false, // 自分が受け取った DM
-                UserId = 222L, // 送信元ユーザーID
+                UserId = new TwitterUserId("222"), // 送信元ユーザーID
             };
 
-            Assert.False(post.CanRetweetBy(selfUserId: 111L));
+            Assert.False(post.CanRetweetBy(selfUserId: new TwitterUserId("111")));
         }
 
         [Fact]
@@ -224,10 +224,10 @@ namespace OpenTween.Models
         {
             var post = new PostClass
             {
-                UserId = 111L, // 自分のツイート
+                UserId = new TwitterUserId("111"), // 自分のツイート
             };
 
-            Assert.True(post.CanRetweetBy(selfUserId: 111L));
+            Assert.True(post.CanRetweetBy(selfUserId: new TwitterUserId("111")));
         }
 
         [Fact]
@@ -235,11 +235,11 @@ namespace OpenTween.Models
         {
             var post = new PostClass
             {
-                UserId = 111L, // 自分のツイート
+                UserId = new TwitterUserId("111"), // 自分のツイート
                 IsProtect = true,
             };
 
-            Assert.True(post.CanRetweetBy(selfUserId: 111L));
+            Assert.True(post.CanRetweetBy(selfUserId: new TwitterUserId("111")));
         }
 
         [Fact]
@@ -247,11 +247,11 @@ namespace OpenTween.Models
         {
             var post = new PostClass
             {
-                UserId = 222L, // 他人のツイート
+                UserId = new TwitterUserId("222"), // 他人のツイート
                 IsProtect = false,
             };
 
-            Assert.True(post.CanRetweetBy(selfUserId: 111L));
+            Assert.True(post.CanRetweetBy(selfUserId: new TwitterUserId("111")));
         }
 
         [Fact]
@@ -259,11 +259,11 @@ namespace OpenTween.Models
         {
             var post = new PostClass
             {
-                UserId = 222L, // 他人のツイート
+                UserId = new TwitterUserId("222"), // 他人のツイート
                 IsProtect = true,
             };
 
-            Assert.False(post.CanRetweetBy(selfUserId: 111L));
+            Assert.False(post.CanRetweetBy(selfUserId: new TwitterUserId("111")));
         }
 
         [Fact]
@@ -275,11 +275,11 @@ namespace OpenTween.Models
                 CreatedAtForSorting = new(2023, 1, 2, 0, 0, 0),
                 CreatedAt = new(2023, 1, 1, 0, 0, 0),
                 ScreenName = "@aaa",
-                UserId = 1L,
+                UserId = new TwitterUserId("1"),
 
                 RetweetedId = new TwitterStatusId("50"),
                 RetweetedBy = "@bbb",
-                RetweetedByUserId = 2L,
+                RetweetedByUserId = new TwitterUserId("2"),
                 RetweetedCount = 0,
             };
 
@@ -289,7 +289,7 @@ namespace OpenTween.Models
             Assert.Equal(new(2023, 1, 1, 0, 0, 0), originalPost.CreatedAt);
             Assert.Equal(new(2023, 1, 1, 0, 0, 0), originalPost.CreatedAtForSorting);
             Assert.Equal("@aaa", originalPost.ScreenName);
-            Assert.Equal(1L, originalPost.UserId);
+            Assert.Equal(new TwitterUserId("1"), originalPost.UserId);
 
             Assert.Null(originalPost.RetweetedId);
             Assert.Equal("", originalPost.RetweetedBy);

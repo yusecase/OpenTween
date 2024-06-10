@@ -91,12 +91,7 @@ namespace OpenTween.Thumbnail.Services
                 var thumbnailUrl = this.GetThumbnailUrl(content);
                 if (MyCommon.IsNullOrEmpty(thumbnailUrl)) return null;
 
-                return new ThumbnailInfo
-                {
-                    MediaPageUrl = url,
-                    ThumbnailImageUrl = thumbnailUrl,
-                    TooltipText = null,
-                };
+                return new ThumbnailInfo(url, thumbnailUrl);
             }
             catch (HttpRequestException)
             {

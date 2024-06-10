@@ -30,6 +30,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 using OpenTween.Api.DataModel;
+using OpenTween.Models;
 
 namespace OpenTween
 {
@@ -42,7 +43,7 @@ namespace OpenTween
         public bool IsPublic = true;
         public int SubscriberCount = 0;   // 購読者数
         public int MemberCount = 0;   // リストメンバ数
-        public long UserId = 0;
+        public PersonId UserId = null!;
         public string Username = "";
         public string Nickname = "";
 
@@ -68,7 +69,7 @@ namespace OpenTween
             this.Slug = listElementData.Slug;
             this.Nickname = listElementData.User.Name.Trim();
             this.Username = listElementData.User.ScreenName;
-            this.UserId = listElementData.User.Id;
+            this.UserId = new TwitterUserId(listElementData.User.IdStr);
 
             this.tw = tw;
         }

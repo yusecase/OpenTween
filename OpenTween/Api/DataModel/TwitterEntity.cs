@@ -175,9 +175,6 @@ namespace OpenTween.Api.DataModel
     [DataContract]
     public class TwitterEntityMention : TwitterEntity
     {
-        [DataMember(Name = "id")]
-        public long Id { get; set; }
-
         [DataMember(Name = "id_str")]
         public string IdStr { get; set; }
 

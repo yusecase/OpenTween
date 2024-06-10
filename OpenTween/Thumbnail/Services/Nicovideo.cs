@@ -72,10 +72,8 @@ namespace OpenTween.Thumbnail.Services
                 if (thumbUrlElement == null)
                     return null;
 
-                return new ThumbnailInfo
+                return new ThumbnailInfo(url, thumbUrlElement.Value)
                 {
-                    MediaPageUrl = url,
-                    ThumbnailImageUrl = thumbUrlElement.Value,
                     TooltipText = BuildTooltip(thumbElement),
                     IsPlayable = true,
                 };

@@ -65,17 +65,23 @@
     <Compile Update="AtIdSupplement.Designer.cs">
       <DependentUpon>AtIdSupplement.cs</DependentUpon>
     </Compile>
+    <Compile Update="Controls\PublicSearchHeaderPanel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Controls\PublicSearchHeaderPanel.Designer.cs">
+      <DependentUpon>PublicSearchHeaderPanel.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Controls\GeneralTimelineHeaderPanel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Controls\GeneralTimelineHeaderPanel.Designer.cs">
+      <DependentUpon>GeneralTimelineHeaderPanel.cs</DependentUpon>
+    </Compile>
     <Compile Update="AppendSettingDialog.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="AppendSettingDialog.Designer.cs">
       <DependentUpon>AppendSettingDialog.cs</DependentUpon>
-    </Compile>
-    <Compile Update="AuthDialog.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Update="AuthDialog.Designer.cs">
-      <DependentUpon>AuthDialog.cs</DependentUpon>
     </Compile>
     <Compile Update="EncryptApiKeyDialog.cs">
       <SubType>Form</SubType>
@@ -328,11 +334,11 @@
     <EmbeddedResource Update="ApiInfoDialog.resx">
       <DependentUpon>ApiInfoDialog.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Update="AuthDialog.en.resx">
-      <DependentUpon>AuthDialog.cs</DependentUpon>
+    <EmbeddedResource Update="Controls\PublicSearchHeaderPanel.resx">
+      <DependentUpon>PublicSearchHeaderPanel.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Update="AuthDialog.resx">
-      <DependentUpon>AuthDialog.cs</DependentUpon>
+    <EmbeddedResource Update="Controls\GeneralTimelineHeaderPanel.resx">
+      <DependentUpon>GeneralTimelineHeaderPanel.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Update="EncryptApiKeyDialog.resx">
       <DependentUpon>EncryptApiKeyDialog.cs</DependentUpon>

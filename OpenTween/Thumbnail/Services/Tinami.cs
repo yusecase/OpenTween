@@ -84,11 +84,9 @@ namespace OpenTween.Thumbnail.Services
 
                 var descElm = xdoc.XPathSelectElement("/rsp/content/description");
 
-                return new ThumbnailInfo
+                return new ThumbnailInfo(url, thumbUrlElm.Attribute("url").Value)
                 {
-                    MediaPageUrl = url,
-                    ThumbnailImageUrl = thumbUrlElm.Attribute("url").Value,
-                    TooltipText = descElm?.Value,
+                    TooltipText = descElm?.Value ?? "",
                 };
             }
             catch (HttpRequestException)

@@ -28,11 +28,8 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using OpenTween.Setting;
+using OpenTween.SocialProtocol;
 
 namespace OpenTween.Models
 {
@@ -40,12 +37,6 @@ namespace OpenTween.Models
     {
         public override MyCommon.TabUsageType TabType
             => MyCommon.TabUsageType.Favorites;
-
-        public long OldestId { get; set; } = long.MaxValue;
-
-        public string? CursorTop { get; set; }
-
-        public string? CursorBottom { get; set; }
 
         public FavoritesTabModel()
             : this(MyCommon.DEFAULTTAB.FAV)
@@ -57,20 +48,30 @@ namespace OpenTween.Models
         {
         }
 
-        public override async Task RefreshAsync(Twitter tw, bool backward, bool startup, IProgress<string> progress)
+        public override async Task RefreshAsync(ISocialAccount account, bool backward, IProgress<string> progress)
         {
-            bool read;
-            if (!SettingManager.Instance.Common.UnreadManage)
-                read = true;
-            else
-                read = startup && SettingManager.Instance.Common.Read;
-
             progress.Report(Properties.Resources.GetTimelineWorker_RunWorkerCompletedText19);
 
-            await tw.GetFavoritesApi(read, this, backward)
+            var firstLoad = !this.IsFirstLoadCompleted;
+            var count = Twitter.GetApiResultCount(MyCommon.WORKERTYPE.Favorites, backward, firstLoad);
+            var cursor = backward ? this.CursorBottom : this.CursorTop;
+
+            var response = await account.Client.GetFavoritesTimeline(count, cursor, firstLoad)
                 .ConfigureAwait(false);
 
+            foreach (var post in response.Posts)
+                TabInformations.GetInstance().AddPost(post);
+
             TabInformations.GetInstance().DistributePosts();
+
+            if (response.CursorTop != null && !backward)
+                this.CursorTop = response.CursorTop;
+
+            if (response.CursorBottom != null)
+                this.CursorBottom = response.CursorBottom;
+
+            if (firstLoad)
+                this.IsFirstLoadCompleted = true;
 
             progress.Report(Properties.Resources.GetTimelineWorker_RunWorkerCompletedText20);
         }

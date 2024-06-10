@@ -72,7 +72,7 @@ namespace OpenTween.Thumbnail.Services
             Assert.NotNull(thumbinfo);
             Assert.Equal("http://example.com/abcd", thumbinfo!.MediaPageUrl);
             Assert.Equal("http://img.example.com/abcd", thumbinfo.ThumbnailImageUrl);
-            Assert.Null(thumbinfo.TooltipText);
+            Assert.Equal("", thumbinfo.TooltipText);
         }
 
         [Fact]
@@ -94,7 +94,7 @@ namespace OpenTween.Thumbnail.Services
             Assert.NotNull(thumbinfo);
             Assert.Equal("http://example.com/abcd", thumbinfo!.MediaPageUrl);
             Assert.Equal("http://img.example.com/abcd", thumbinfo.ThumbnailImageUrl);
-            Assert.Null(thumbinfo.TooltipText);
+            Assert.Equal("", thumbinfo.TooltipText);
         }
 
         [Fact]
@@ -116,7 +116,7 @@ namespace OpenTween.Thumbnail.Services
             Assert.NotNull(thumbinfo);
             Assert.Equal("http://example.com/abcd", thumbinfo!.MediaPageUrl);
             Assert.Equal("http://img.example.com/abcd", thumbinfo.ThumbnailImageUrl);
-            Assert.Null(thumbinfo.TooltipText);
+            Assert.Equal("", thumbinfo.TooltipText);
         }
 
         [Fact]
@@ -138,7 +138,7 @@ namespace OpenTween.Thumbnail.Services
             Assert.NotNull(thumbinfo);
             Assert.Equal("http://example.com/abcd", thumbinfo!.MediaPageUrl);
             Assert.Equal("http://img.example.com/abcd", thumbinfo.ThumbnailImageUrl);
-            Assert.Null(thumbinfo.TooltipText);
+            Assert.Equal("", thumbinfo.TooltipText);
         }
 
         [Fact]
@@ -161,7 +161,7 @@ namespace OpenTween.Thumbnail.Services
             Assert.NotNull(thumbinfo);
             Assert.Equal("http://example.com/abcd", thumbinfo!.MediaPageUrl);
             Assert.Equal("http://img.example.com/abcd", thumbinfo.ThumbnailImageUrl);
-            Assert.Null(thumbinfo.TooltipText);
+            Assert.Equal("", thumbinfo.TooltipText);
         }
 
         [Fact]
@@ -183,7 +183,7 @@ namespace OpenTween.Thumbnail.Services
             Assert.NotNull(thumbinfo);
             Assert.Equal("http://example.com/abcd", thumbinfo!.MediaPageUrl);
             Assert.Equal("http://img.example.com/abcd", thumbinfo.ThumbnailImageUrl);
-            Assert.Null(thumbinfo.TooltipText);
+            Assert.Equal("", thumbinfo.TooltipText);
         }
 
         [Fact]
@@ -205,7 +205,7 @@ namespace OpenTween.Thumbnail.Services
             Assert.NotNull(thumbinfo);
             Assert.Equal("http://example.com/abcd", thumbinfo!.MediaPageUrl);
             Assert.Equal("http://img.example.com/abcd", thumbinfo.ThumbnailImageUrl);
-            Assert.Null(thumbinfo.TooltipText);
+            Assert.Equal("", thumbinfo.TooltipText);
         }
 
         [Fact]

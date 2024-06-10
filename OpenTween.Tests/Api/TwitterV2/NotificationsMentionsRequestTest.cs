@@ -59,8 +59,8 @@ namespace OpenTween.Api.TwitterV2
             Assert.Equal("1748671085438988794", status.IdStr);
             Assert.Equal("40480664", status.User.IdStr);
 
-            Assert.Equal("DAABDAABCgABAAAAAC4B0ZQIAAIAAAACCAADm5udsQgABCaolIMACwACAAAAC0FZMG1xVjB6VEZjAAA", response.CursorTop);
-            Assert.Equal("DAACDAABCgABAAAAAC4B0ZQIAAIAAAACCAADm5udsQgABCaolIMACwACAAAAC0FZMG1xVjB6VEZjAAA", response.CursorBottom);
+            Assert.Equal("DAABDAABCgABAAAAAC4B0ZQIAAIAAAACCAADm5udsQgABCaolIMACwACAAAAC0FZMG1xVjB6VEZjAAA", response.CursorTop?.Value.Value);
+            Assert.Equal("DAACDAABCgABAAAAAC4B0ZQIAAIAAAACCAADm5udsQgABCaolIMACwACAAAAC0FZMG1xVjB6VEZjAAA", response.CursorBottom?.Value.Value);
 
             mock.VerifyAll();
         }
@@ -88,7 +88,7 @@ namespace OpenTween.Api.TwitterV2
             var request = new NotificationsMentionsRequest()
             {
                 Count = 20,
-                Cursor = "aaa",
+                Cursor = new("aaa"),
             };
 
             await request.Send(mock.Object);

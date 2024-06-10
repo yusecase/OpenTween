@@ -98,6 +98,33 @@ namespace OpenTween
                 yield return (value, i++);
         }
 
+        public static (T Min, T Max) MinMax<T>(this IEnumerable<T> enumerable)
+        {
+            var comparer = Comparer<T>.Default;
+            T min, max;
+
+            using (var e = enumerable.GetEnumerator())
+            {
+                if (!e.MoveNext())
+                    throw new InvalidOperationException("Empty sequence is not allowed");
+
+                min = max = e.Current;
+
+                while (e.MoveNext())
+                {
+                    var value = e.Current;
+
+                    if (comparer.Compare(min, value) > 0)
+                        min = value;
+
+                    if (comparer.Compare(max, value) < 0)
+                        max = value;
+                }
+            }
+
+            return (min, max);
+        }
+
         public static void Deconstruct<TKey, TValue>(this KeyValuePair<TKey, TValue> kvp, out TKey key, out TValue value)
         {
             key = kvp.Key;

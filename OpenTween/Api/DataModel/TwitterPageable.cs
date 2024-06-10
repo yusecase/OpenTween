@@ -27,6 +27,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
+using OpenTween.Models;
 
 namespace OpenTween.Api.DataModel
 {
@@ -69,14 +70,14 @@ namespace OpenTween.Api.DataModel
     }
 
     [DataContract]
-    public class TwitterIds : TwitterPageable<long>
+    public class TwitterIds : TwitterPageable<TwitterUserId>
     {
         [DataMember(Name = "ids")]
-        public long[] Ids { get; set; }
+        public string[] Ids { get; set; }
 
         [IgnoreDataMember]
-        public override long[] Items
-            => this.Ids;
+        public override TwitterUserId[] Items
+            => this.Ids.Select(x => new TwitterUserId(x)).ToArray();
 
         /// <exception cref="SerializationException"/>
         public static TwitterIds ParseJson(string json)

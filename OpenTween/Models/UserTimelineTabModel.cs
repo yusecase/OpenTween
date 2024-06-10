@@ -33,6 +33,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using OpenTween.Setting;
+using OpenTween.SocialProtocol;
+using OpenTween.SocialProtocol.Twitter;
 
 namespace OpenTween.Models
 {
@@ -43,13 +45,7 @@ namespace OpenTween.Models
 
         public string ScreenName { get; }
 
-        public string? UserId { get; set; }
-
-        public PostId? OldestId { get; set; }
-
-        public string? CursorTop { get; set; }
-
-        public string? CursorBottom { get; set; }
+        public PersonId? UserId { get; set; }
 
         public UserTimelineTabModel(string tabName, string screenName)
             : base(tabName)
@@ -57,23 +53,25 @@ namespace OpenTween.Models
             this.ScreenName = screenName;
         }
 
-        public override async Task RefreshAsync(Twitter tw, bool backward, bool startup, IProgress<string> progress)
+        public override async Task RefreshAsync(ISocialAccount account, bool backward, IProgress<string> progress)
         {
+            if (account is not TwitterAccount twAccount)
+                throw new ArgumentException($"Invalid account type: {account.AccountType}", nameof(account));
+
             if (MyCommon.IsNullOrEmpty(this.ScreenName))
                 return;
 
-            bool read;
-            if (!SettingManager.Instance.Common.UnreadManage)
-                read = true;
-            else
-                read = startup && SettingManager.Instance.Common.Read;
-
             progress.Report("UserTimeline refreshing...");
 
-            await tw.GetUserTimelineApi(read, this, backward)
+            var firstLoad = !this.IsFirstLoadCompleted;
+
+            await twAccount.Legacy.GetUserTimelineApi(this, backward, firstLoad)
                 .ConfigureAwait(false);
 
             TabInformations.GetInstance().DistributePosts();
+
+            if (firstLoad)
+                this.IsFirstLoadCompleted = true;
 
             progress.Report("UserTimeline refreshed");
         }

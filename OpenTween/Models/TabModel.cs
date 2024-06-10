@@ -36,6 +36,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using OpenTween.Setting;
+using OpenTween.SocialProtocol;
 
 namespace OpenTween.Models
 {
@@ -51,11 +52,20 @@ namespace OpenTween.Models
 
         public string SoundFile { get; set; } = "";
 
+        public IQueryCursor? CursorTop { get; set; }
+
+        public IQueryCursor? CursorBottom { get; set; }
+
         public ComparerMode SortMode { get; private set; }
 
         public SortOrder SortOrder { get; private set; }
 
+        public bool IsFirstLoadCompleted { get; protected set; } = false;
+
         public abstract MyCommon.TabUsageType TabType { get; }
+
+        public virtual AccountKey? SourceAccountKey
+            => null;
 
         public virtual ConcurrentDictionary<PostId, PostClass> Posts
             => TabInformations.GetInstance().Posts;
@@ -67,8 +77,6 @@ namespace OpenTween.Models
         public bool IsDefaultTabType => this.TabType.IsDefault();
 
         public bool IsDistributableTabType => this.TabType.IsDistributable();
-
-        public bool IsInnerStorageTabType => this.TabType.IsInnerStorage();
 
         /// <summary>
         /// 次回起動時にも保持されるタブか（SettingTabsに保存されるか）
@@ -128,7 +136,7 @@ namespace OpenTween.Models
         protected TabModel(string tabName)
             => this.TabName = tabName;
 
-        public abstract Task RefreshAsync(Twitter tw, bool backward, bool startup, IProgress<string> progress);
+        public abstract Task RefreshAsync(ISocialAccount account, bool backward, IProgress<string> progress);
 
         private readonly record struct TemporaryId(
             PostId StatusId,

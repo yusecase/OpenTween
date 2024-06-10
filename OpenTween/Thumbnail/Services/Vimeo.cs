@@ -88,10 +88,8 @@ namespace OpenTween.Thumbnail.Services
                     tooltipText = string.Format("{0} ({1:00}:{2:00})", titleElm.Value, minute, second);
                 }
 
-                return new ThumbnailInfo
+                return new ThumbnailInfo(url, thumbUrlElm.Value)
                 {
-                    MediaPageUrl = url,
-                    ThumbnailImageUrl = thumbUrlElm.Value,
                     TooltipText = tooltipText,
                     IsPlayable = true,
                 };

@@ -72,11 +72,11 @@ namespace OpenTween.Api.GraphQL
             var rootElm = this.LoadResponseDocument("TimelineTweet_SimpleTweet.json");
             var timelineTweet = new TimelineTweet(rootElm);
             var status = timelineTweet.ToTwitterStatus();
-            var postFactory = new TwitterPostFactory(this.CreateTabInfo());
-            var post = postFactory.CreateFromStatus(status, selfUserId: 1L, new HashSet<long>());
+            var postFactory = new TwitterPostFactory(this.CreateTabInfo(), new());
+            var post = postFactory.CreateFromStatus(status, selfUserId: new("1"), new HashSet<PersonId>(), firstLoad: false);
 
             Assert.Equal("1613784711020826626", post.StatusId.Id);
-            Assert.Equal(40480664L, post.UserId);
+            Assert.Equal(new TwitterUserId("40480664"), post.UserId);
             Assert.False(post.IsPromoted);
         }
 
@@ -86,11 +86,11 @@ namespace OpenTween.Api.GraphQL
             var rootElm = this.LoadResponseDocument("TimelineTweet_TweetWithMedia.json");
             var timelineTweet = new TimelineTweet(rootElm);
             var status = timelineTweet.ToTwitterStatus();
-            var postFactory = new TwitterPostFactory(this.CreateTabInfo());
-            var post = postFactory.CreateFromStatus(status, selfUserId: 1L, new HashSet<long>());
+            var postFactory = new TwitterPostFactory(this.CreateTabInfo(), new());
+            var post = postFactory.CreateFromStatus(status, selfUserId: new("1"), new HashSet<PersonId>(), firstLoad: false);
 
             Assert.Equal("1614587968567783424", post.StatusId.Id);
-            Assert.Equal(40480664L, post.UserId);
+            Assert.Equal(new TwitterUserId("40480664"), post.UserId);
             Assert.Equal(2, post.Media.Count);
             Assert.Equal("https://pbs.twimg.com/media/FmgrJiEaAAEU42G.png", post.Media[0].Url);
             Assert.Equal("OpenTweenで @opentween のツイート一覧を表示しているスクショ", post.Media[0].AltText);
@@ -104,13 +104,13 @@ namespace OpenTween.Api.GraphQL
             var rootElm = this.LoadResponseDocument("TimelineTweet_RetweetedTweet.json");
             var timelineTweet = new TimelineTweet(rootElm);
             var status = timelineTweet.ToTwitterStatus();
-            var postFactory = new TwitterPostFactory(this.CreateTabInfo());
-            var post = postFactory.CreateFromStatus(status, selfUserId: 1L, new HashSet<long>());
+            var postFactory = new TwitterPostFactory(this.CreateTabInfo(), new());
+            var post = postFactory.CreateFromStatus(status, selfUserId: new("1"), new HashSet<PersonId>(), firstLoad: false);
 
             Assert.Equal("1617128268548964354", post.StatusId.Id);
-            Assert.Equal(40480664L, post.RetweetedByUserId);
+            Assert.Equal(new TwitterUserId("40480664"), post.RetweetedByUserId);
             Assert.Equal("1617126084138659840", post.RetweetedId!.Id);
-            Assert.Equal(514241801L, post.UserId);
+            Assert.Equal(new TwitterUserId("514241801"), post.UserId);
         }
 
         [Fact]
@@ -119,11 +119,11 @@ namespace OpenTween.Api.GraphQL
             var rootElm = this.LoadResponseDocument("TimelineTweet_TweetWithVisibility.json");
             var timelineTweet = new TimelineTweet(rootElm);
             var status = timelineTweet.ToTwitterStatus();
-            var postFactory = new TwitterPostFactory(this.CreateTabInfo());
-            var post = postFactory.CreateFromStatus(status, selfUserId: 1L, new HashSet<long>());
+            var postFactory = new TwitterPostFactory(this.CreateTabInfo(), new());
+            var post = postFactory.CreateFromStatus(status, selfUserId: new("1"), new HashSet<PersonId>(), firstLoad: false);
 
             Assert.Equal("1602775353088524288", post.StatusId.Id);
-            Assert.Equal(357750891L, post.UserId);
+            Assert.Equal(new TwitterUserId("357750891"), post.UserId);
         }
 
         [Fact]
@@ -132,11 +132,11 @@ namespace OpenTween.Api.GraphQL
             var rootElm = this.LoadResponseDocument("TimelineTweet_SelfThread.json");
             var timelineTweet = new TimelineTweet(rootElm);
             var status = timelineTweet.ToTwitterStatus();
-            var postFactory = new TwitterPostFactory(this.CreateTabInfo());
-            var post = postFactory.CreateFromStatus(status, selfUserId: 1L, new HashSet<long>());
+            var postFactory = new TwitterPostFactory(this.CreateTabInfo(), new());
+            var post = postFactory.CreateFromStatus(status, selfUserId: new("1"), new HashSet<PersonId>(), firstLoad: false);
 
             Assert.Equal("1511751702684499968", post.StatusId.Id);
-            Assert.Equal(40480664L, post.UserId);
+            Assert.Equal(new TwitterUserId("40480664"), post.UserId);
         }
 
         [Fact]
@@ -145,8 +145,8 @@ namespace OpenTween.Api.GraphQL
             var rootElm = this.LoadResponseDocument("TimelineTweet_QuotedTweet.json");
             var timelineTweet = new TimelineTweet(rootElm);
             var status = timelineTweet.ToTwitterStatus();
-            var postFactory = new TwitterPostFactory(this.CreateTabInfo());
-            var post = postFactory.CreateFromStatus(status, selfUserId: 1L, new HashSet<long>());
+            var postFactory = new TwitterPostFactory(this.CreateTabInfo(), new());
+            var post = postFactory.CreateFromStatus(status, selfUserId: new("1"), new HashSet<PersonId>(), firstLoad: false);
 
             Assert.Equal("1588614645866147840", post.StatusId.Id);
             var quotedPostId = Assert.Single(post.QuoteStatusIds);
@@ -159,8 +159,8 @@ namespace OpenTween.Api.GraphQL
             var rootElm = this.LoadResponseDocument("TimelineTweet_QuotedTweet_Tombstone.json");
             var timelineTweet = new TimelineTweet(rootElm);
             var status = timelineTweet.ToTwitterStatus();
-            var postFactory = new TwitterPostFactory(this.CreateTabInfo());
-            var post = postFactory.CreateFromStatus(status, selfUserId: 1L, new HashSet<long>());
+            var postFactory = new TwitterPostFactory(this.CreateTabInfo(), new());
+            var post = postFactory.CreateFromStatus(status, selfUserId: new("1"), new HashSet<PersonId>(), firstLoad: false);
 
             Assert.Equal("1614653321310253057", post.StatusId.Id);
             var quotedPostId = Assert.Single(post.QuoteStatusIds);
@@ -173,11 +173,11 @@ namespace OpenTween.Api.GraphQL
             var rootElm = this.LoadResponseDocument("TimelineTweet_PromotedTweet.json");
             var timelineTweet = new TimelineTweet(rootElm);
             var status = timelineTweet.ToTwitterStatus();
-            var postFactory = new TwitterPostFactory(this.CreateTabInfo());
-            var post = postFactory.CreateFromStatus(status, selfUserId: 1L, new HashSet<long>());
+            var postFactory = new TwitterPostFactory(this.CreateTabInfo(), new());
+            var post = postFactory.CreateFromStatus(status, selfUserId: new("1"), new HashSet<PersonId>(), firstLoad: false);
 
             Assert.Equal("1674737917363888129", post.StatusId.Id);
-            Assert.Equal(2941313791L, post.UserId);
+            Assert.Equal(new TwitterUserId("2941313791"), post.UserId);
             Assert.True(post.IsPromoted);
             Assert.Matches(new Regex(@"^\[Promoted\]\n"), post.TextFromApi);
         }
@@ -193,6 +193,16 @@ namespace OpenTween.Api.GraphQL
                 () => timelineTweet.ToTwitterStatus()
             );
             Assert.Equal("This Post is from a suspended account. Learn more", ex.Message);
+        }
+
+        [Fact]
+        public void ToStatus_MissingLegacy_Test()
+        {
+            // legacy プロパティが欠けておりツイートの表示に必要な情報が不足している場合
+            var rootElm = this.LoadResponseDocument("TimelineTweet_MissingLegacy.json");
+            var timelineTweet = new TimelineTweet(rootElm);
+
+            Assert.False(timelineTweet.IsAvailable);
         }
 
         [Fact]

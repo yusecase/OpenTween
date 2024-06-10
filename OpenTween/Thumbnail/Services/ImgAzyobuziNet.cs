@@ -215,12 +215,9 @@ namespace OpenTween.Thumbnail.Services
                     {
                         if (regex.IsMatch(url))
                         {
-                            return new ThumbnailInfo
+                            return new ThumbnailInfo(url, this.apiBase + "redirect?size=large&uri=" + Uri.EscapeDataString(url))
                             {
-                                MediaPageUrl = url,
-                                ThumbnailImageUrl = this.apiBase + "redirect?size=large&uri=" + Uri.EscapeDataString(url),
                                 FullSizeImageUrl = this.apiBase + "redirect?size=full&uri=" + Uri.EscapeDataString(url),
-                                TooltipText = null,
                             };
                         }
                     }

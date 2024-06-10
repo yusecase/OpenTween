@@ -50,7 +50,7 @@ namespace OpenTween.Models
 
         public override void AddPostQueue(PostClass post)
         {
-            if (TabInformations.GetInstance().IsMuted(post, isHomeTimeline: false))
+            if (TabInformations.GetInstance().IsGlobalMuted(post))
                 return;
 
             this.internalPosts.TryAdd(post.StatusId, post);

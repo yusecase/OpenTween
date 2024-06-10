@@ -20,12 +20,10 @@
 // Boston, MA 02110-1301, USA.
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using OpenTween.Api;
-using OpenTween.Api.DataModel;
 using OpenTween.Models;
 using OpenTween.Setting;
 using Xunit;
@@ -47,6 +45,8 @@ namespace OpenTween
             new[] { "21984934471" })]
         [InlineData("https://twitter.com/imgazyobuzi/status/293333871171354624/photo/1",
             new[] { "293333871171354624" })]
+        [InlineData("https://x.com/twitterapi/status/22634515958",
+            new[] { "22634515958" })]
         public void StatusUrlRegexTest(string url, string[] expected)
         {
             var results = Twitter.StatusUrlRegex.Matches(url).Cast<Match>()
@@ -66,6 +66,9 @@ namespace OpenTween
         [InlineData("https://twitter.com/messages/compose?recipient_id=514241801", true)]
         [InlineData("http://twitter.com/messages/compose?recipient_id=514241801", true)]
         [InlineData("https://twitter.com/messages/compose?recipient_id=514241801&text=%E3%81%BB%E3%81%92", true)]
+        [InlineData("https://x.com/twitterapi/status/22634515958", true)]
+        [InlineData("https://mobile.x.com/twitterapi/status/22634515958", true)]
+        [InlineData("https://x.com/messages/compose?recipient_id=514241801", false)] // DM は twitter.com のみ通る
         public void AttachmentUrlRegexTest(string url, bool isMatch)
             => Assert.Equal(isMatch, Twitter.AttachmentUrlRegex.IsMatch(url));
 
@@ -81,31 +84,6 @@ namespace OpenTween
                 .Select(x => x.Groups["StatusId"].Value).ToArray();
 
             Assert.Equal(expected, results);
-        }
-
-        [Fact]
-        public void FindTopOfReplyChainTest()
-        {
-            var posts = new Dictionary<PostId, PostClass>
-            {
-                [new TwitterStatusId("950")] = new PostClass { StatusId = new TwitterStatusId("950"), InReplyToStatusId = null }, // このツイートが末端
-                [new TwitterStatusId("987")] = new PostClass { StatusId = new TwitterStatusId("987"), InReplyToStatusId = new TwitterStatusId("950") },
-                [new TwitterStatusId("999")] = new PostClass { StatusId = new TwitterStatusId("999"), InReplyToStatusId = new TwitterStatusId("987") },
-                [new TwitterStatusId("1000")] = new PostClass { StatusId = new TwitterStatusId("1000"), InReplyToStatusId = new TwitterStatusId("999") },
-            };
-            Assert.Equal(new TwitterStatusId("950"), Twitter.FindTopOfReplyChain(posts, new TwitterStatusId("1000")).StatusId);
-            Assert.Equal(new TwitterStatusId("950"), Twitter.FindTopOfReplyChain(posts, new TwitterStatusId("950")).StatusId);
-            Assert.Throws<ArgumentException>(() => Twitter.FindTopOfReplyChain(posts, new TwitterStatusId("500")));
-
-            posts = new Dictionary<PostId, PostClass>
-            {
-                // new TwitterStatusId("1200") は posts の中に存在しない
-                [new TwitterStatusId("1210")] = new PostClass { StatusId = new TwitterStatusId("1210"), InReplyToStatusId = new TwitterStatusId("1200") },
-                [new TwitterStatusId("1220")] = new PostClass { StatusId = new TwitterStatusId("1220"), InReplyToStatusId = new TwitterStatusId("1210") },
-                [new TwitterStatusId("1230")] = new PostClass { StatusId = new TwitterStatusId("1230"), InReplyToStatusId = new TwitterStatusId("1220") },
-            };
-            Assert.Equal(new TwitterStatusId("1210"), Twitter.FindTopOfReplyChain(posts, new TwitterStatusId("1230")).StatusId);
-            Assert.Equal(new TwitterStatusId("1210"), Twitter.FindTopOfReplyChain(posts, new TwitterStatusId("1210")).StatusId);
         }
 
         [Fact]

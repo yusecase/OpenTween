@@ -185,7 +185,9 @@ namespace OpenTween
                 // キャッシュにない画像の場合は読み込みが完了してから再描画する
                 async Task RefreshProfileImageLazy()
                 {
-                    await this.LoadProfileImage(normalImageUrl, sizeName);
+                    var success = await this.LoadProfileImage(normalImageUrl, sizeName);
+                    if (!success)
+                        return;
 
                     if (this.listView.IsDisposed)
                         return;
@@ -203,24 +205,26 @@ namespace OpenTween
             }
         }
 
-        private async Task LoadProfileImage(string normalImageUrl, string sizeName)
+        private async Task<bool> LoadProfileImage(string normalImageUrl, string sizeName)
         {
             try
             {
                 var imageUrl = Twitter.CreateProfileImageUrl(normalImageUrl, sizeName);
                 await this.iconCache.DownloadImageAsync(imageUrl);
+
+                return true;
             }
             catch (InvalidImageException)
             {
-                return;
+                return false;
             }
             catch (HttpRequestException)
             {
-                return;
+                return false;
             }
             catch (OperationCanceledException)
             {
-                return;
+                return false;
             }
         }
 

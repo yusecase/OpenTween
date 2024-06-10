@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?><root xml:space="preserve">
+	<resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+	<resheader name="version"><value>2.0</value></resheader>
+	<resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+	<resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+	<assembly alias="System.Drawing" name="System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+
+	<data name="$this.Text"><value>Add Twitter Account</value></data>
+	<data name="buttonCancel.Text"><value>&amp;Cancel</value></data>
+	<data name="buttonGetAuthorizeUri.Text"><value>Continue</value></data>
+	<data name="checkBoxUseCustomConsumerKey.Size" type="System.Drawing.Size, System.Drawing"><value>160, 16</value></data>
+	<data name="checkBoxUseCustomConsumerKey.Text"><value>Use custom consumer key</value></data>
+	<data name="label3.Size" type="System.Drawing.Size, System.Drawing"><value>166, 12</value></data>
+	<data name="label3.Text"><value>Open below url in your browser:</value></data>
+	<data name="label4.Size" type="System.Drawing.Size, System.Drawing"><value>268, 12</value></data>
+	<data name="label4.Text"><value>Please enter the PIN code displayed after approval:</value></data>
+</root>

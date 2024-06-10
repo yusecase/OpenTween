@@ -51,19 +51,17 @@ namespace OpenTween
                 .Setup(
                     x => x.GetThumbnailInfoAsync("http://example.com/abcd", It.IsAny<PostClass>(), It.IsAny<CancellationToken>())
                 )
-                .ReturnsAsync(new MockThumbnailInfo
+                .ReturnsAsync(new ThumbnailInfo("http://example.com/abcd", "http://img.example.com/abcd.png")
                 {
-                    MediaPageUrl = "http://example.com/abcd",
-                    ThumbnailImageUrl = "http://img.example.com/abcd.png",
+                    Loader = new FakeThumbnailLoader(),
                 });
             thumbnailServiceMock
                 .Setup(
                     x => x.GetThumbnailInfoAsync("http://example.com/efgh", It.IsAny<PostClass>(), It.IsAny<CancellationToken>())
                 )
-                .ReturnsAsync(new MockThumbnailInfo
+                .ReturnsAsync(new ThumbnailInfo("http://example.com/efgh", "http://img.example.com/efgh.png")
                 {
-                    MediaPageUrl = "http://example.com/efgh",
-                    ThumbnailImageUrl = "http://img.example.com/efgh.png",
+                    Loader = new FakeThumbnailLoader(),
                 });
             return thumbnailServiceMock.Object;
         }
@@ -124,7 +122,10 @@ namespace OpenTween
                 .Returns(async () =>
                 {
                     await Task.Delay(200);
-                    return new MockThumbnailInfo();
+                    return new ThumbnailInfo("http://slow.example.com/abcd", "http://slow.example.com/abcd")
+                    {
+                        Loader = new FakeThumbnailLoader(),
+                    };
                 });
 
             var thumbnailGenerator = this.CreateThumbnailGenerator();
@@ -151,10 +152,10 @@ namespace OpenTween
         public async Task LoadSelectedThumbnail_Test()
         {
             using var image = TestUtils.CreateDummyImage();
-            var thumbnailInfoMock = new Mock<ThumbnailInfo>() { CallBase = true };
-            thumbnailInfoMock
+            var thumbnailLoaderMock = new Mock<IThumbnailLoader>();
+            thumbnailLoaderMock
                 .Setup(
-                    x => x.LoadThumbnailImageAsync(It.IsAny<HttpClient>(), It.IsAny<CancellationToken>())
+                    x => x.Load(It.IsAny<HttpClient>(), It.IsAny<CancellationToken>())
                 )
                 .ReturnsAsync(image);
 
@@ -163,7 +164,10 @@ namespace OpenTween
                 .Setup(
                     x => x.GetThumbnailInfoAsync("http://example.com/abcd", It.IsAny<PostClass>(), It.IsAny<CancellationToken>())
                 )
-                .ReturnsAsync(thumbnailInfoMock.Object);
+                .ReturnsAsync(new ThumbnailInfo("http://example.com/abcd", "http://example.com/abcd")
+                {
+                    Loader = thumbnailLoaderMock.Object,
+                });
 
             var thumbnailGenerator = this.CreateThumbnailGenerator();
             thumbnailGenerator.Services.Add(thumbnailServiceMock.Object);
@@ -187,10 +191,10 @@ namespace OpenTween
         public async Task LoadSelectedThumbnail_RequestCollapsingTest()
         {
             var tsc = new TaskCompletionSource<MemoryImage>();
-            var thumbnailInfoMock = new Mock<ThumbnailInfo>() { CallBase = true };
-            thumbnailInfoMock
+            var thumbnailLoaderMock = new Mock<IThumbnailLoader>();
+            thumbnailLoaderMock
                 .Setup(
-                    x => x.LoadThumbnailImageAsync(It.IsAny<HttpClient>(), It.IsAny<CancellationToken>())
+                    x => x.Load(It.IsAny<HttpClient>(), It.IsAny<CancellationToken>())
                 )
                 .Returns(tsc.Task);
 
@@ -199,7 +203,10 @@ namespace OpenTween
                 .Setup(
                     x => x.GetThumbnailInfoAsync("http://example.com/abcd", It.IsAny<PostClass>(), It.IsAny<CancellationToken>())
                 )
-                .ReturnsAsync(thumbnailInfoMock.Object);
+                .ReturnsAsync(new ThumbnailInfo("http://example.com/abcd", "http://example.com/abcd")
+                {
+                    Loader = thumbnailLoaderMock.Object,
+                });
 
             var thumbnailGenerator = this.CreateThumbnailGenerator();
             thumbnailGenerator.Services.Add(thumbnailServiceMock.Object);
@@ -354,9 +361,9 @@ namespace OpenTween
             Assert.Equal(0, tweetThumbnail.SelectedIndex);
         }
 
-        private class MockThumbnailInfo : ThumbnailInfo
+        private class FakeThumbnailLoader : IThumbnailLoader
         {
-            public override Task<MemoryImage> LoadThumbnailImageAsync(HttpClient http, CancellationToken cancellationToken)
+            public Task<MemoryImage> Load(HttpClient http, CancellationToken cancellationToken)
                 => Task.FromResult(TestUtils.CreateDummyImage());
         }
     }

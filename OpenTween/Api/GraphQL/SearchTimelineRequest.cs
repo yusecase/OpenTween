@@ -38,20 +38,22 @@ namespace OpenTween.Api.GraphQL
 
         public int Count { get; set; } = 20;
 
-        public string? Cursor { get; set; }
+        public TwitterGraphqlCursor? Cursor { get; set; }
 
         public SearchTimelineRequest(string rawQuery)
             => this.RawQuery = rawQuery;
 
         public Dictionary<string, string> CreateParameters()
         {
+            var cursorStr = this.Cursor?.Value;
+
             return new()
             {
                 ["variables"] = "{" +
                     $@"""rawQuery"":""{JsonUtils.EscapeJsonString(this.RawQuery)}""," +
                     $@"""count"":{this.Count}," +
                     $@"""product"":""Latest""" +
-                    (this.Cursor != null ? $@",""cursor"":""{JsonUtils.EscapeJsonString(this.Cursor)}""" : "") +
+                    (cursorStr != null ? $@",""cursor"":""{JsonUtils.EscapeJsonString(cursorStr)}""" : "") +
                     "}",
                 ["features"] = "{" +
                     @"""responsive_web_graphql_exclude_directive_enabled"":true," +
@@ -79,7 +81,7 @@ namespace OpenTween.Api.GraphQL
             };
         }
 
-        public async Task<TimelineResponse> Send(IApiConnection apiConnection)
+        public async Task<TimelineGraphqlResponse> Send(IApiConnection apiConnection)
         {
             var request = new GetRequest
             {

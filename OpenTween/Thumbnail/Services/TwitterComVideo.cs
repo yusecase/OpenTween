@@ -56,11 +56,9 @@ namespace OpenTween.Thumbnail.Services
             var mediaInfo = post.Media.FirstOrDefault(x => x.Url == url);
             if (mediaInfo?.VideoUrl != null)
             {
-                return new ThumbnailInfo
+                return new ThumbnailInfo(mediaInfo.VideoUrl, url)
                 {
-                    MediaPageUrl = mediaInfo.VideoUrl,
-                    ThumbnailImageUrl = url,
-                    TooltipText = mediaInfo.AltText,
+                    TooltipText = mediaInfo.AltText ?? "",
                     IsPlayable = true,
                 };
             }
@@ -71,8 +69,10 @@ namespace OpenTween.Thumbnail.Services
 
             if (thumbInfo != null)
             {
-                thumbInfo.IsPlayable = true;
-                return thumbInfo;
+                return thumbInfo with
+                {
+                    IsPlayable = true,
+                };
             }
 
             return null;

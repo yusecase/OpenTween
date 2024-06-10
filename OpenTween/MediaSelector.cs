@@ -32,6 +32,8 @@ using System.Text;
 using System.Threading.Tasks;
 using OpenTween.Api.DataModel;
 using OpenTween.MediaUploadServices;
+using OpenTween.SocialProtocol;
+using OpenTween.SocialProtocol.Twitter;
 
 namespace OpenTween
 {
@@ -117,14 +119,27 @@ namespace OpenTween
             return index != -1 ? this.MediaServices[index].Value : null;
         }
 
-        public void InitializeServices(Twitter tw, TwitterConfiguration twitterConfig)
+        public void InitializeServices(ISocialAccount account)
         {
-            this.MediaServices = new KeyValuePair<string, IMediaUploadService>[]
+            if (account is TwitterAccount twAccount)
             {
-                new("Twitter", new TwitterPhoto(tw, twitterConfig)),
-                new("Imgur", new Imgur(twitterConfig)),
-                new("Mobypicture", new Mobypicture(tw, twitterConfig)),
-            };
+                var twLegacy = twAccount.Legacy;
+                var twConfiguration = twAccount.AccountState.Configuration;
+
+                this.MediaServices = new KeyValuePair<string, IMediaUploadService>[]
+                {
+                    new("Twitter", new TwitterPhoto(twLegacy, twConfiguration)),
+                    new("Imgur", new Imgur(twConfiguration)),
+                    new("Mobypicture", new Mobypicture(twLegacy, twConfiguration)),
+                };
+            }
+            else
+            {
+                this.MediaServices = new KeyValuePair<string, IMediaUploadService>[]
+                {
+                    new("Imgur", new Imgur(TwitterConfiguration.DefaultConfiguration())),
+                };
+            }
         }
 
         public void SelectMediaService(string serviceName, int? index = null)

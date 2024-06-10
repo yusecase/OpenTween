@@ -73,7 +73,6 @@ namespace OpenTween.Api.GraphQL
 
             return new()
             {
-                Id = long.Parse(GetText(userElm, "rest_id")),
                 IdStr = GetText(userElm, "rest_id"),
                 Name = GetText(userLegacyElm, "name"),
                 ProfileImageUrlHttps = GetText(userLegacyElm, "profile_image_url_https"),

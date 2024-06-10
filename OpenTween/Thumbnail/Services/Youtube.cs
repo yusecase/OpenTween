@@ -53,11 +53,8 @@ namespace OpenTween.Thumbnail.Services
                 var videoId = match.Groups["videoId"].Value;
                 var imgUrl = "https://i.ytimg.com/vi/" + videoId + "/hqdefault.jpg";
 
-                return new ThumbnailInfo
+                return new ThumbnailInfo(url, imgUrl)
                 {
-                    MediaPageUrl = url,
-                    ThumbnailImageUrl = imgUrl,
-                    TooltipText = null,
                     IsPlayable = true,
                 };
             },

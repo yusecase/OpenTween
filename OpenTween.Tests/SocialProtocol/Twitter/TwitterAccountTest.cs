@@ -19,7 +19,7 @@
 // the Free Software Foundation, Inc., 51 Franklin Street - Fifth Floor,
 // Boston, MA 02110-1301, USA.
 
-using System;
+using OpenTween.Models;
 using Xunit;
 
 namespace OpenTween.SocialProtocol.Twitter
@@ -29,21 +29,21 @@ namespace OpenTween.SocialProtocol.Twitter
         [Fact]
         public void Initialize_Test()
         {
-            var accountKey = Guid.NewGuid();
+            var accountKey = AccountKey.New();
             using var account = new TwitterAccount(accountKey);
 
             var accountSettings = new UserAccount
             {
-                UniqueKey = accountKey,
+                UniqueKey = accountKey.Id,
                 TwitterAuthType = APIAuthType.OAuth1,
                 Token = "aaaaa",
                 TokenSecret = "aaaaa",
-                UserId = 11111L,
+                UserId = "11111",
                 Username = "tetete",
             };
             var settingCommon = new SettingCommon();
             account.Initialize(accountSettings, settingCommon);
-            Assert.Equal(11111L, account.UserId);
+            Assert.Equal(new TwitterUserId("11111"), account.UserId);
             Assert.Equal("tetete", account.UserName);
             Assert.Equal(APIAuthType.OAuth1, account.AuthType);
             Assert.Same(account.Legacy.Api.Connection, account.Connection);
@@ -52,34 +52,82 @@ namespace OpenTween.SocialProtocol.Twitter
         [Fact]
         public void Initialize_ReconfigureTest()
         {
-            var accountKey = Guid.NewGuid();
+            var accountKey = AccountKey.New();
             using var account = new TwitterAccount(accountKey);
 
             var accountSettings1 = new UserAccount
             {
-                UniqueKey = accountKey,
+                UniqueKey = accountKey.Id,
                 TwitterAuthType = APIAuthType.OAuth1,
                 Token = "aaaaa",
                 TokenSecret = "aaaaa",
-                UserId = 11111L,
+                UserId = "11111",
                 Username = "tetete",
             };
             var settingCommon1 = new SettingCommon();
             account.Initialize(accountSettings1, settingCommon1);
-            Assert.Equal(11111L, account.UserId);
+            Assert.Equal(new TwitterUserId("11111"), account.UserId);
 
             var accountSettings2 = new UserAccount
             {
-                UniqueKey = accountKey,
+                UniqueKey = accountKey.Id,
                 TwitterAuthType = APIAuthType.OAuth1,
                 Token = "bbbbb",
                 TokenSecret = "bbbbb",
-                UserId = 22222L,
+                UserId = "22222",
                 Username = "hoge",
             };
             var settingCommon2 = new SettingCommon();
             account.Initialize(accountSettings2, settingCommon2);
-            Assert.Equal(22222L, account.UserId);
+            Assert.Equal(new TwitterUserId("22222"), account.UserId);
+        }
+
+        [Fact]
+        public void AccountType_Test()
+        {
+            using var account = new TwitterAccount(AccountKey.New());
+            Assert.Equal("Twitter", account.AccountType);
+        }
+
+        [Fact]
+        public void Client_V1_Test()
+        {
+            var accountKey = AccountKey.New();
+            using var account = new TwitterAccount(accountKey);
+
+            var accountSettings = new UserAccount
+            {
+                UniqueKey = accountKey.Id,
+                TwitterAuthType = APIAuthType.OAuth1,
+                Token = "aaaaa",
+                TokenSecret = "aaaaa",
+                UserId = "11111",
+                Username = "tetete",
+            };
+            var settingCommon = new SettingCommon();
+            account.Initialize(accountSettings, settingCommon);
+
+            Assert.IsType<TwitterV1Client>(account.Client);
+        }
+
+        [Fact]
+        public void Client_Graphql_Test()
+        {
+            var accountKey = AccountKey.New();
+            using var account = new TwitterAccount(accountKey);
+
+            var accountSettings = new UserAccount
+            {
+                UniqueKey = accountKey.Id,
+                TwitterAuthType = APIAuthType.TwitterComCookie,
+                TwitterComCookie = "auth_token=foo; ct0=bar",
+                UserId = "11111",
+                Username = "tetete",
+            };
+            var settingCommon = new SettingCommon();
+            account.Initialize(accountSettings, settingCommon);
+
+            Assert.IsType<TwitterGraphqlClient>(account.Client);
         }
     }
 }

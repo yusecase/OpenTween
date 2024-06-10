@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?><root xml:space="preserve">
+	<resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+	<resheader name="version"><value>2.0</value></resheader>
+	<resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+	<resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+	<assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+	<assembly alias="mscorlib" name="mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+	<assembly alias="System.Drawing" name="System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+
+	<data name="$this.AutoScaleDimensions" type="System.Drawing.SizeF, System.Drawing"><value>96, 96</value></data>
+	<data name="$this.ClientSize" type="System.Drawing.Size, System.Drawing"><value>500, 316</value></data>
+	<metadata name="$this.Localizable" type="System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"><value>True</value></metadata>
+	<data name="$this.Text"><value>Misskeyアカウントを追加</value></data>
+	<data name="&gt;&gt;$this.Name"><value>MisskeySetupDialog</value></data>
+	<data name="&gt;&gt;$this.Type"><value>OpenTween.OTBaseForm, OpenTween, Version=3.13.0.1, Culture=neutral, PublicKeyToken=null</value></data>
+	<data name="&gt;&gt;bindingSource.Name"><value>bindingSource</value></data>
+	<data name="&gt;&gt;bindingSource.Type"><value>System.Windows.Forms.BindingSource, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;buttonCancel.Name"><value>buttonCancel</value></data>
+	<data name="&gt;&gt;buttonCancel.Parent"><value>$this</value></data>
+	<data name="&gt;&gt;buttonCancel.Type"><value>System.Windows.Forms.Button, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;buttonCancel.ZOrder"><value>3</value></data>
+	<data name="&gt;&gt;buttonGetAccessToken.Name"><value>buttonGetAccessToken</value></data>
+	<data name="&gt;&gt;buttonGetAccessToken.Parent"><value>groupBoxAuthorize</value></data>
+	<data name="&gt;&gt;buttonGetAccessToken.Type"><value>System.Windows.Forms.Button, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;buttonGetAccessToken.ZOrder"><value>3</value></data>
+	<data name="&gt;&gt;buttonGetAuthorizeUri.Name"><value>buttonGetAuthorizeUri</value></data>
+	<data name="&gt;&gt;buttonGetAuthorizeUri.Parent"><value>groupBoxInputServerName</value></data>
+	<data name="&gt;&gt;buttonGetAuthorizeUri.Type"><value>System.Windows.Forms.Button, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;buttonGetAuthorizeUri.ZOrder"><value>3</value></data>
+	<data name="&gt;&gt;contextMenuLinkLabel.Name"><value>contextMenuLinkLabel</value></data>
+	<data name="&gt;&gt;contextMenuLinkLabel.Type"><value>System.Windows.Forms.ContextMenuStrip, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;groupBoxAuthorize.Name"><value>groupBoxAuthorize</value></data>
+	<data name="&gt;&gt;groupBoxAuthorize.Parent"><value>$this</value></data>
+	<data name="&gt;&gt;groupBoxAuthorize.Type"><value>System.Windows.Forms.GroupBox, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;groupBoxAuthorize.ZOrder"><value>2</value></data>
+	<data name="&gt;&gt;groupBoxInputServerName.Name"><value>groupBoxInputServerName</value></data>
+	<data name="&gt;&gt;groupBoxInputServerName.Parent"><value>$this</value></data>
+	<data name="&gt;&gt;groupBoxInputServerName.Type"><value>System.Windows.Forms.GroupBox, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;groupBoxInputServerName.ZOrder"><value>1</value></data>
+	<data name="&gt;&gt;label1.Name"><value>label1</value></data>
+	<data name="&gt;&gt;label1.Parent"><value>groupBoxInputServerName</value></data>
+	<data name="&gt;&gt;label1.Type"><value>System.Windows.Forms.Label, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;label1.ZOrder"><value>0</value></data>
+	<data name="&gt;&gt;label2.Name"><value>label2</value></data>
+	<data name="&gt;&gt;label2.Parent"><value>groupBoxInputServerName</value></data>
+	<data name="&gt;&gt;label2.Type"><value>System.Windows.Forms.Label, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;label2.ZOrder"><value>1</value></data>
+	<data name="&gt;&gt;label3.Name"><value>label3</value></data>
+	<data name="&gt;&gt;label3.Parent"><value>groupBoxAuthorize</value></data>
+	<data name="&gt;&gt;label3.Type"><value>System.Windows.Forms.Label, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;label3.ZOrder"><value>0</value></data>
+	<data name="&gt;&gt;label4.Name"><value>label4</value></data>
+	<data name="&gt;&gt;label4.Parent"><value>groupBoxAuthorize</value></data>
+	<data name="&gt;&gt;label4.Type"><value>System.Windows.Forms.Label, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;label4.ZOrder"><value>2</value></data>
+	<data name="&gt;&gt;linkLabelAuthorize.Name"><value>linkLabelAuthorize</value></data>
+	<data name="&gt;&gt;linkLabelAuthorize.Parent"><value>groupBoxAuthorize</value></data>
+	<data name="&gt;&gt;linkLabelAuthorize.Type"><value>System.Windows.Forms.LinkLabel, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;linkLabelAuthorize.ZOrder"><value>1</value></data>
+	<data name="&gt;&gt;menuItemCopyLink.Name"><value>menuItemCopyLink</value></data>
+	<data name="&gt;&gt;menuItemCopyLink.Type"><value>System.Windows.Forms.ToolStripMenuItem, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;textBoxServerHostname.Name"><value>textBoxServerHostname</value></data>
+	<data name="&gt;&gt;textBoxServerHostname.Parent"><value>groupBoxInputServerName</value></data>
+	<data name="&gt;&gt;textBoxServerHostname.Type"><value>System.Windows.Forms.TextBox, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;textBoxServerHostname.ZOrder"><value>2</value></data>
+	<metadata name="bindingSource.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"><value>17, 17</value></metadata>
+	<data name="buttonCancel.Anchor" type="System.Windows.Forms.AnchorStyles, System.Windows.Forms"><value>Bottom, Right</value></data>
+	<data name="buttonCancel.AutoSize" type="System.Boolean, mscorlib"><value>True</value></data>
+	<data name="buttonCancel.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms"><value>NoControl</value></data>
+	<data name="buttonCancel.Location" type="System.Drawing.Point, System.Drawing"><value>396, 281</value></data>
+	<data name="buttonCancel.Size" type="System.Drawing.Size, System.Drawing"><value>92, 23</value></data>
+	<data name="buttonCancel.TabIndex" type="System.Int32, mscorlib"><value>5</value></data>
+	<data name="buttonCancel.Text"><value>キャンセル (&amp;C)</value></data>
+	<data name="buttonGetAccessToken.Anchor" type="System.Windows.Forms.AnchorStyles, System.Windows.Forms"><value>Bottom, Right</value></data>
+	<data name="buttonGetAccessToken.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms"><value>NoControl</value></data>
+	<data name="buttonGetAccessToken.Location" type="System.Drawing.Point, System.Drawing"><value>363, 110</value></data>
+	<data name="buttonGetAccessToken.Margin" type="System.Windows.Forms.Padding, System.Windows.Forms"><value>3, 15, 3, 3</value></data>
+	<data name="buttonGetAccessToken.Size" type="System.Drawing.Size, System.Drawing"><value>100, 23</value></data>
+	<data name="buttonGetAccessToken.TabIndex" type="System.Int32, mscorlib"><value>4</value></data>
+	<data name="buttonGetAccessToken.Text"><value>OK</value></data>
+	<data name="buttonGetAuthorizeUri.Anchor" type="System.Windows.Forms.AnchorStyles, System.Windows.Forms"><value>Bottom, Right</value></data>
+	<data name="buttonGetAuthorizeUri.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms"><value>NoControl</value></data>
+	<data name="buttonGetAuthorizeUri.Location" type="System.Drawing.Point, System.Drawing"><value>363, 75</value></data>
+	<data name="buttonGetAuthorizeUri.Margin" type="System.Windows.Forms.Padding, System.Windows.Forms"><value>3, 10, 3, 3</value></data>
+	<data name="buttonGetAuthorizeUri.Size" type="System.Drawing.Size, System.Drawing"><value>100, 23</value></data>
+	<data name="buttonGetAuthorizeUri.TabIndex" type="System.Int32, mscorlib"><value>5</value></data>
+	<data name="buttonGetAuthorizeUri.Text"><value>次へ進む</value></data>
+	<data name="contextMenuLinkLabel.Size" type="System.Drawing.Size, System.Drawing"><value>148, 26</value></data>
+	<metadata name="contextMenuLinkLabel.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"><value>148, 17</value></metadata>
+	<data name="groupBoxAuthorize.Anchor" type="System.Windows.Forms.AnchorStyles, System.Windows.Forms"><value>Top, Left, Right</value></data>
+	<data name="groupBoxAuthorize.Location" type="System.Drawing.Point, System.Drawing"><value>12, 129</value></data>
+	<data name="groupBoxAuthorize.Padding" type="System.Windows.Forms.Padding, System.Windows.Forms"><value>10, 10, 10, 10</value></data>
+	<data name="groupBoxAuthorize.Size" type="System.Drawing.Size, System.Drawing"><value>476, 146</value></data>
+	<data name="groupBoxAuthorize.TabIndex" type="System.Int32, mscorlib"><value>4</value></data>
+	<data name="groupBoxAuthorize.Text"><value>Step 2</value></data>
+	<data name="groupBoxInputServerName.Anchor" type="System.Windows.Forms.AnchorStyles, System.Windows.Forms"><value>Top, Left, Right</value></data>
+	<data name="groupBoxInputServerName.Location" type="System.Drawing.Point, System.Drawing"><value>12, 12</value></data>
+	<data name="groupBoxInputServerName.Padding" type="System.Windows.Forms.Padding, System.Windows.Forms"><value>10, 10, 10, 10</value></data>
+	<data name="groupBoxInputServerName.Size" type="System.Drawing.Size, System.Drawing"><value>476, 111</value></data>
+	<data name="groupBoxInputServerName.TabIndex" type="System.Int32, mscorlib"><value>3</value></data>
+	<data name="groupBoxInputServerName.Text"><value>Step 1</value></data>
+	<data name="label1.AutoSize" type="System.Boolean, mscorlib"><value>True</value></data>
+	<data name="label1.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms"><value>NoControl</value></data>
+	<data name="label1.Location" type="System.Drawing.Point, System.Drawing"><value>13, 25</value></data>
+	<data name="label1.Margin" type="System.Windows.Forms.Padding, System.Windows.Forms"><value>3, 3, 3, 3</value></data>
+	<data name="label1.Size" type="System.Drawing.Size, System.Drawing"><value>144, 12</value></data>
+	<data name="label1.TabIndex" type="System.Int32, mscorlib"><value>1</value></data>
+	<data name="label1.Text"><value>Misskeyサーバーのドメイン名</value></data>
+	<data name="label2.Location" type="System.Drawing.Point, System.Drawing"><value>15, 46</value></data>
+	<data name="label2.Margin" type="System.Windows.Forms.Padding, System.Windows.Forms"><value>3, 3, 1, 3</value></data>
+	<data name="label2.Size" type="System.Drawing.Size, System.Drawing"><value>55, 12</value></data>
+	<data name="label2.TabIndex" type="System.Int32, mscorlib"><value>6</value></data>
+	<data name="label2.Text"><value>https://</value></data>
+	<data name="label2.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing"><value>MiddleRight</value></data>
+	<data name="label3.AutoSize" type="System.Boolean, mscorlib"><value>True</value></data>
+	<data name="label3.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms"><value>NoControl</value></data>
+	<data name="label3.Location" type="System.Drawing.Point, System.Drawing"><value>14, 26</value></data>
+	<data name="label3.Size" type="System.Drawing.Size, System.Drawing"><value>351, 12</value></data>
+	<data name="label3.TabIndex" type="System.Int32, mscorlib"><value>0</value></data>
+	<data name="label3.Text"><value>以下のURLにアクセスし、内容を確認してアプリとの連携を許可してください:</value></data>
+	<data name="label4.AutoSize" type="System.Boolean, mscorlib"><value>True</value></data>
+	<data name="label4.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms"><value>NoControl</value></data>
+	<data name="label4.Location" type="System.Drawing.Point, System.Drawing"><value>13, 83</value></data>
+	<data name="label4.Size" type="System.Drawing.Size, System.Drawing"><value>260, 12</value></data>
+	<data name="label4.TabIndex" type="System.Int32, mscorlib"><value>2</value></data>
+	<data name="label4.Text"><value>連携を許可したら OK ボタンを押して次に進んで下さい</value></data>
+	<data name="linkLabelAuthorize.Anchor" type="System.Windows.Forms.AnchorStyles, System.Windows.Forms"><value>Top, Left, Right</value></data>
+	<data name="linkLabelAuthorize.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms"><value>NoControl</value></data>
+	<data name="linkLabelAuthorize.Location" type="System.Drawing.Point, System.Drawing"><value>25, 53</value></data>
+	<data name="linkLabelAuthorize.Margin" type="System.Windows.Forms.Padding, System.Windows.Forms"><value>15, 15, 15, 15</value></data>
+	<data name="linkLabelAuthorize.Size" type="System.Drawing.Size, System.Drawing"><value>426, 15</value></data>
+	<data name="linkLabelAuthorize.TabIndex" type="System.Int32, mscorlib"><value>1</value></data>
+	<data name="linkLabelAuthorize.Text"><value>linkLabel</value></data>
+	<data name="linkLabelAuthorize.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing"><value>MiddleLeft</value></data>
+	<data name="menuItemCopyLink.Size" type="System.Drawing.Size, System.Drawing"><value>147, 22</value></data>
+	<data name="menuItemCopyLink.Text"><value>URLをコピー (&amp;C)</value></data>
+	<data name="textBoxServerHostname.Location" type="System.Drawing.Point, System.Drawing"><value>71, 43</value></data>
+	<data name="textBoxServerHostname.Margin" type="System.Windows.Forms.Padding, System.Windows.Forms"><value>0, 3, 3, 3</value></data>
+	<data name="textBoxServerHostname.Size" type="System.Drawing.Size, System.Drawing"><value>392, 19</value></data>
+	<data name="textBoxServerHostname.TabIndex" type="System.Int32, mscorlib"><value>2</value></data>
+</root>

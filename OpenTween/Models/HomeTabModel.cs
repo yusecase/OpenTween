@@ -35,6 +35,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using OpenTween.Setting;
+using OpenTween.SocialProtocol;
+using OpenTween.SocialProtocol.Twitter;
 
 namespace OpenTween.Models
 {
@@ -42,12 +44,6 @@ namespace OpenTween.Models
     {
         public override MyCommon.TabUsageType TabType
             => MyCommon.TabUsageType.Home;
-
-        public PostId? OldestId { get; set; }
-
-        public string? CursorTop { get; set; }
-
-        public string? CursorBottom { get; set; }
 
         public int TweetsPerHour => this.tweetsPerHour;
 
@@ -71,24 +67,34 @@ namespace OpenTween.Models
             this.UpdateTimelineSpeed(post.CreatedAt);
         }
 
-        public override async Task RefreshAsync(Twitter tw, bool backward, bool startup, IProgress<string> progress)
+        public override async Task RefreshAsync(ISocialAccount account, bool backward, IProgress<string> progress)
         {
-            bool read;
-            if (!SettingManager.Instance.Common.UnreadManage)
-                read = true;
-            else
-                read = startup && SettingManager.Instance.Common.Read;
-
             progress.Report(string.Format(Properties.Resources.GetTimelineWorker_RunWorkerCompletedText5, backward ? -1 : 1));
 
-            await tw.GetHomeTimelineApi(read, this, backward, startup)
+            var firstLoad = !this.IsFirstLoadCompleted;
+            var count = Twitter.GetApiResultCount(MyCommon.WORKERTYPE.Timeline, backward, firstLoad);
+            var cursor = backward ? this.CursorBottom : this.CursorTop;
+
+            var response = await account.Client.GetHomeTimeline(count, cursor, firstLoad)
                 .ConfigureAwait(false);
+
+            foreach (var post in response.Posts)
+                TabInformations.GetInstance().AddPost(post);
 
             // 新着時未読クリア
             if (SettingManager.Instance.Common.ReadOldPosts)
                 TabInformations.GetInstance().SetReadHomeTab();
 
             TabInformations.GetInstance().DistributePosts();
+
+            if (response.CursorTop != null && !backward)
+                this.CursorTop = response.CursorTop;
+
+            if (response.CursorBottom != null)
+                this.CursorBottom = response.CursorBottom;
+
+            if (firstLoad)
+                this.IsFirstLoadCompleted = true;
 
             progress.Report(Properties.Resources.GetTimelineWorker_RunWorkerCompletedText1);
         }

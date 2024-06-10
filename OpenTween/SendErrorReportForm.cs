@@ -201,10 +201,10 @@ namespace OpenTween
             if (!ApplicationSettings.AllowSendErrorReportByDM)
                 return false;
 
-            if (this.tw == null || !this.tw.AccessLevel.HasFlag(TwitterApiAccessLevel.DirectMessage))
+            if (this.tw == null)
                 return false;
 
-            if (Twitter.AccountState != MyCommon.ACCOUNT_STATE.Valid)
+            if (this.tw.AccountState.HasUnrecoverableError)
                 return false;
 
             return true;

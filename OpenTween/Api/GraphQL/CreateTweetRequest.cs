@@ -41,7 +41,7 @@ namespace OpenTween.Api.GraphQL
 
         public TwitterStatusId? InReplyToTweetId { get; set; }
 
-        public string[] ExcludeReplyUserIds { get; set; } = Array.Empty<string>();
+        public TwitterUserId[] ExcludeReplyUserIds { get; set; } = Array.Empty<TwitterUserId>();
 
         public string[] MediaIds { get; set; } = Array.Empty<string>();
 
@@ -105,7 +105,7 @@ namespace OpenTween.Api.GraphQL
                     Reply: this.InReplyToTweetId != null
                         ? new(
                             InReplyToTweetId: this.InReplyToTweetId.Id,
-                            ExcludeReplyUserIds: this.ExcludeReplyUserIds
+                            ExcludeReplyUserIds: this.ExcludeReplyUserIds.Select(x => x.Id).ToArray()
                         )
                         : null,
                     Media: this.MediaIds.Length > 0

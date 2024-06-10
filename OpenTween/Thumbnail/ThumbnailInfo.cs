@@ -22,48 +22,50 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using OpenTween.Connection;
 
 namespace OpenTween.Thumbnail
 {
-    public class ThumbnailInfo : IEquatable<ThumbnailInfo>
+    public record ThumbnailInfo(
+        string MediaPageUrl,
+        string? ThumbnailImageUrl
+    )
     {
         /// <summary>サムネイルとして表示するメディアが掲載されている URL</summary>
         /// <remarks>
         /// 例えば Youtube のサムネイルの場合、動画そのものの URL ではなく
         /// https://www.youtube.com/watch?v=****** 形式の URL が含まれる
         /// </remarks>
-        public string MediaPageUrl { get; set; } = "";
+        public string MediaPageUrl { get; init; } = MediaPageUrl;
 
         /// <summary>サムネイルとして表示する画像の URL</summary>
         /// <remarks>
         /// ここに含まれる URL は直接画像として表示可能である必要がある
         /// </remarks>
-        public string ThumbnailImageUrl { get; set; } = "";
+        public string? ThumbnailImageUrl { get; init; } = ThumbnailImageUrl;
 
         /// <summary>最も高解像度な画像の URL</summary>
         /// <remarks>
         /// サムネイルとしては不適だが、より高解像度な画像を表示する場面に使用できる
         /// URL があればここに含まれる
         /// </remarks>
-        public string? FullSizeImageUrl { get; set; }
+        public string? FullSizeImageUrl { get; init; }
 
         /// <summary>ツールチップとして表示するテキスト</summary>
         /// <remarks>
         /// サムネイル画像にマウスオーバーした際に表示されるテキスト
         /// </remarks>
-        public string? TooltipText { get; set; }
+        public string TooltipText { get; init; } = "";
 
         /// <summary>
         /// 対象となるメディアが動画や音声など再生可能なものであるか否か
         /// </summary>
-        public bool IsPlayable { get; set; }
+        public bool IsPlayable { get; init; }
+
+        public IThumbnailLoader? Loader { get; init; }
 
         public Task<MemoryImage> LoadThumbnailImageAsync()
             => this.LoadThumbnailImageAsync(CancellationToken.None);
@@ -71,45 +73,15 @@ namespace OpenTween.Thumbnail
         public Task<MemoryImage> LoadThumbnailImageAsync(CancellationToken cancellationToken)
             => this.LoadThumbnailImageAsync(Networking.Http, cancellationToken);
 
-        public async virtual Task<MemoryImage> LoadThumbnailImageAsync(HttpClient http, CancellationToken cancellationToken)
+        public async Task<MemoryImage> LoadThumbnailImageAsync(HttpClient http, CancellationToken cancellationToken)
         {
-            MemoryImage? image = null;
-            try
-            {
-                using var response = await http.GetAsync(this.ThumbnailImageUrl, cancellationToken)
-                    .ConfigureAwait(false);
+            IThumbnailLoader CreateLoader()
+                => new SimpleThumbnailLoader(this.ThumbnailImageUrl ?? throw new InvalidOperationException($"{nameof(this.ThumbnailImageUrl)} is not set"));
 
-                response.EnsureSuccessStatusCode();
+            var loader = this.Loader ?? CreateLoader();
 
-                using var imageStream = await response.Content.ReadAsStreamAsync()
-                    .ConfigureAwait(false);
-
-                image = await MemoryImage.CopyFromStreamAsync(imageStream)
-                    .ConfigureAwait(false);
-
-                cancellationToken.ThrowIfCancellationRequested();
-
-                return image;
-            }
-            catch (OperationCanceledException)
-            {
-                image?.Dispose();
-                throw;
-            }
+            return await loader.Load(http, cancellationToken)
+                .ConfigureAwait(false);
         }
-
-        public override bool Equals(object? obj)
-            => this.Equals(obj as ThumbnailInfo);
-
-        public bool Equals(ThumbnailInfo? other)
-            => other != null &&
-                other.MediaPageUrl == this.MediaPageUrl &&
-                other.ThumbnailImageUrl == this.ThumbnailImageUrl &&
-                other.TooltipText == this.TooltipText &&
-                other.FullSizeImageUrl == this.FullSizeImageUrl &&
-                other.IsPlayable == this.IsPlayable;
-
-        public override int GetHashCode()
-            => this.MediaPageUrl.GetHashCode() ^ this.ThumbnailImageUrl.GetHashCode();
     }
 }

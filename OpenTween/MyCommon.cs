@@ -51,9 +51,9 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 using System.Windows.Forms;
-using OpenTween.Api;
 using OpenTween.Models;
 using OpenTween.Setting;
+using OpenTween.SocialProtocol.Twitter;
 
 namespace OpenTween
 {
@@ -190,12 +190,6 @@ namespace OpenTween
 #else
         public static bool DebugBuild = false;
 #endif
-
-        public enum ACCOUNT_STATE
-        {
-            Valid,
-            Invalid,
-        }
 
         public enum REPLY_ICONSTATE
         {
@@ -393,8 +387,8 @@ namespace OpenTween
                 var mainForm = Application.OpenForms.OfType<TweenMain>().FirstOrDefault();
 
                 ErrorReport report;
-                if (mainForm != null && !mainForm.IsDisposed)
-                    report = new ErrorReport(mainForm.TwitterInstance, errorReport);
+                if (mainForm != null && mainForm.CurrentTabAccount is TwitterAccount twitterAccount && !mainForm.IsDisposed)
+                    report = new ErrorReport(twitterAccount.Legacy, errorReport);
                 else
                     report = new ErrorReport(errorReport);
 
@@ -668,8 +662,6 @@ namespace OpenTween
             SearchResults = 4096,
         }
 
-        public static TwitterApiStatus TwitterApiInfo = new();
-
         public static bool IsAnimatedGif(string filename)
         {
             Image? img = null;
@@ -835,12 +827,6 @@ namespace OpenTween
         }
 
         public const string TwitterUrl = "https://twitter.com/";
-
-        public static string GetStatusUrl(PostClass post)
-        {
-            var statusId = post.RetweetedId ?? post.StatusId;
-            return GetStatusUrl(post.ScreenName, statusId.ToTwitterStatusId());
-        }
 
         public static string GetStatusUrl(string screenName, TwitterStatusId statusId)
             => TwitterUrl + screenName + "/status/" + statusId.Id;

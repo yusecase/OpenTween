@@ -71,11 +71,9 @@ namespace OpenTween.Thumbnail.Services
             var media = post.Media.FirstOrDefault(x => x.Url == url);
             var altText = media?.AltText;
 
-            var thumb = new ThumbnailInfo
+            var thumb = new ThumbnailInfo(mediaOrig, mediaLarge)
             {
-                MediaPageUrl = mediaOrig,
-                ThumbnailImageUrl = mediaLarge,
-                TooltipText = altText,
+                TooltipText = altText ?? "",
                 FullSizeImageUrl = mediaOrig,
             };
 

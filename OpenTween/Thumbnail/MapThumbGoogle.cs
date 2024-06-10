@@ -36,12 +36,10 @@ namespace OpenTween.Thumbnail
     {
         public override Task<ThumbnailInfo> GetThumbnailInfoAsync(PostClass.StatusGeo geo)
         {
-            var thumb = new ThumbnailInfo
-            {
-                MediaPageUrl = this.CreateMapLinkUrl(geo.Latitude, geo.Longitude),
-                ThumbnailImageUrl = this.CreateStaticMapUrl(geo.Latitude, geo.Longitude),
-                TooltipText = null,
-            };
+            var mapUrl = this.CreateMapLinkUrl(geo.Latitude, geo.Longitude);
+            var staticImageUrl = this.CreateStaticMapUrl(geo.Latitude, geo.Longitude);
+
+            var thumb = new ThumbnailInfo(mapUrl, staticImageUrl);
 
             return Task.FromResult(thumb);
         }

@@ -96,7 +96,7 @@ namespace OpenTween
                 new TwitterEntityMention
                 {
                     Indices = new[] { 0, 11 },
-                    Id = 6253282L,
+                    IdStr = "6253282",
                     Name = "Twitter API",
                     ScreenName = "twitterapi",
                 },
@@ -248,7 +248,7 @@ namespace OpenTween
                 new TwitterEntityMention
                 {
                     Indices = new[] { 2, 13 },
-                    Id = 6253282L,
+                    IdStr = "6253282",
                     Name = "Twitter API",
                     ScreenName = "twitterapi",
                 },
@@ -268,7 +268,7 @@ namespace OpenTween
                 new TwitterEntityMention
                 {
                     Indices = new[] { 10, 21 },
-                    Id = 6253282L,
+                    IdStr = "6253282",
                     Name = "Twitter API",
                     ScreenName = "twitterapi",
                 },
@@ -288,7 +288,7 @@ namespace OpenTween
                 new TwitterEntityMention
                 {
                     Indices = new[] { 4, 15 },
-                    Id = 6253282L,
+                    IdStr = "6253282",
                     Name = "Twitter API",
                     ScreenName = "twitterapi",
                 },
@@ -327,7 +327,7 @@ namespace OpenTween
                 new TwitterEntityMention
                 {
                     Indices = new[] { 3, 11 },
-                    Id = 89942943L,
+                    IdStr = "89942943",
                     ScreenName = "irucame",
                 },
             };

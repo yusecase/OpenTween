@@ -1,0 +1,191 @@
+{
+  "itemType": "TimelineTweet",
+  "__typename": "TimelineTweet",
+  "tweet_results": {
+    "result": {
+      "__typename": "Tweet",
+      "rest_id": "1773243199718412424",
+      "core": {
+        "user_results": {
+          "result": {
+            "__typename": "User",
+            "id": "VXNlcjoxMDMxMzEzOTMwNzM0NDYwOTI4",
+            "rest_id": "1031313930734460928",
+            "affiliates_highlighted_label": {
+              "label": {
+                "url": {
+                  "url": "https://twitter.com/GitNationOrg",
+                  "urlType": "DeepLink"
+                },
+                "badge": {
+                  "url": "https://pbs.twimg.com/profile_images/1742893548913971200/gPyZHwuD_bigger.png"
+                },
+                "description": "GitNation Foundation",
+                "userLabelType": "BusinessLabel",
+                "userLabelDisplayType": "Badge"
+              }
+            },
+            "has_graduated_access": true,
+            "is_blue_verified": true,
+            "profile_image_shape": "Square",
+            "legacy": {
+              "can_dm": true,
+              "can_media_tag": true,
+              "created_at": "Sun Aug 19 22:56:16 +0000 2018",
+              "default_profile": false,
+              "default_profile_image": false,
+              "description": "The conference for devs🔥who are into modern web development with React, React Native, GraphQL, TypeScript & hungry to learn from the best.\n\n🕊 #ReactAdvanced",
+              "entities": {
+                "description": {
+                  "urls": []
+                },
+                "url": {
+                  "urls": [
+                    {
+                      "display_url": "reactadvanced.com",
+                      "expanded_url": "https://reactadvanced.com",
+                      "url": "https://t.co/mXmDeadq9Q",
+                      "indices": [
+                        0,
+                        23
+                      ]
+                    }
+                  ]
+                }
+              },
+              "fast_followers_count": 0,
+              "favourites_count": 1159,
+              "followers_count": 8102,
+              "friends_count": 1742,
+              "has_custom_timelines": false,
+              "is_translator": false,
+              "listed_count": 111,
+              "location": "London, UK & Online",
+              "media_count": 334,
+              "name": "React Advanced London 🗓 Oct 25 & 28, 2024",
+              "normal_followers_count": 8102,
+              "pinned_tweet_ids_str": [
+                "1764946964305649822"
+              ],
+              "possibly_sensitive": false,
+              "profile_banner_url": "https://pbs.twimg.com/profile_banners/1031313930734460928/1624632538",
+              "profile_image_url_https": "https://pbs.twimg.com/profile_images/1055241662409199616/fm6ZkYCV_normal.jpg",
+              "profile_interstitial_type": "",
+              "screen_name": "ReactAdvanced",
+              "statuses_count": 1887,
+              "translator_type": "none",
+              "url": "https://t.co/mXmDeadq9Q",
+              "verified": false,
+              "verified_type": "Business",
+              "want_retweets": false,
+              "withheld_in_countries": []
+            }
+          }
+        }
+      },
+      "card": {
+        "rest_id": "card://1773243197902262272",
+        "legacy": {
+          "binding_values": [
+            {
+              "key": "unified_card",
+              "value": {
+                "string_value": "{\"type\":\"image_website\",\"component_objects\":{\"details_1\":{\"type\":\"details\",\"data\":{\"title\":{\"content\":\"Check out the React Advanced London!\",\"is_rtl\":false},\"subtitle\":{\"content\":\"reactadvanced.com\",\"is_rtl\":false},\"destination\":\"browser_1\"}},\"media_1\":{\"type\":\"media\",\"data\":{\"id\":\"3_1773243011096268800\",\"destination\":\"browser_1\"}}},\"destination_objects\":{\"browser_1\":{\"type\":\"browser\",\"data\":{\"url_data\":{\"url\":\"https://reactadvanced.com/\",\"vanity\":\"reactadvanced.com\"}}}},\"components\":[\"media_1\",\"details_1\"],\"media_entities\":{\"3_1773243011096268800\":{\"id\":1773243011096268800,\"id_str\":\"1773243011096268800\",\"indices\":[0,0],\"media_url\":\"\",\"media_url_https\":\"https://pbs.twimg.com/media/GJvTH6DWUAAZhXT.png\",\"url\":\"\",\"display_url\":\"\",\"expanded_url\":\"\",\"type\":\"photo\",\"original_info\":{\"width\":800,\"height\":800,\"focus_rects\":[{\"x\":0,\"y\":0,\"h\":448,\"w\":800},{\"x\":0,\"y\":0,\"h\":800,\"w\":800},{\"x\":69,\"y\":0,\"h\":800,\"w\":702},{\"x\":220,\"y\":0,\"h\":800,\"w\":400},{\"x\":0,\"y\":0,\"h\":800,\"w\":800}]},\"sizes\":{\"large\":{\"w\":800,\"h\":800,\"resize\":\"fit\"},\"small\":{\"w\":680,\"h\":680,\"resize\":\"fit\"},\"thumb\":{\"w\":150,\"h\":150,\"resize\":\"crop\"},\"medium\":{\"w\":800,\"h\":800,\"resize\":\"fit\"}},\"source_user_id\":1031313930734460928,\"source_user_id_str\":\"1031313930734460928\",\"media_key\":\"3_1773243011096268800\",\"ext\":{\"mediaColor\":{\"r\":{\"ok\":{\"palette\":[{\"rgb\":{\"red\":36,\"green\":252,\"blue\":137},\"percentage\":83.93},{\"rgb\":{\"red\":19,\"green\":138,\"blue\":75},\"percentage\":7.65},{\"rgb\":{\"red\":135,\"green\":253,\"blue\":190},\"percentage\":2.54},{\"rgb\":{\"red\":1,\"green\":7,\"blue\":4},\"percentage\":2.49},{\"rgb\":{\"red\":196,\"green\":254,\"blue\":223},\"percentage\":1.22}]}},\"ttl\":-1}}}}}",
+                "type": "STRING"
+              }
+            },
+            {
+              "key": "card_url",
+              "value": {
+                "scribe_key": "card_url",
+                "string_value": "https://twitter.com",
+                "type": "STRING"
+              }
+            }
+          ],
+          "card_platform": {
+            "platform": {
+              "audience": {
+                "name": "production"
+              },
+              "device": {
+                "name": "Swift",
+                "version": "12"
+              }
+            }
+          },
+          "name": "unified_card",
+          "url": "card://1773243197902262272",
+          "user_refs_results": []
+        }
+      },
+      "unmention_data": {},
+      "edit_control": {
+        "edit_tweet_ids": [
+          "1773243199718412424"
+        ],
+        "editable_until_msecs": "1711612698000",
+        "is_edit_eligible": false,
+        "edits_remaining": "5"
+      },
+      "is_translatable": false,
+      "views": {
+        "count": "2305481",
+        "state": "EnabledWithCount"
+      },
+      "source": "<a href=\"https://twitter.com\" rel=\"nofollow\">Twitter for Advertisers</a>"
+    }
+  },
+  "tweetDisplayType": "Tweet",
+  "promotedMetadata": {
+    "advertiser_results": {},
+    "adMetadataContainer": {
+      "renderLegacyWebsiteCard": false
+    },
+    "disclosureType": "NoDisclosure",
+    "experimentValues": [
+      {
+        "key": "nsfa_htl_experiment_enable",
+        "value": "10000"
+      },
+      {
+        "key": "nsfa_htl_experimental_threshold_profanity",
+        "value": "1.0"
+      },
+      {
+        "key": "nsfa_htl_experimental_threshold_binary",
+        "value": "1.0"
+      },
+      {
+        "key": "min_gap_for_nsfw_avoidance",
+        "value": "1"
+      },
+      {
+        "key": "nsfa_htl_experimental_threshold_drugs",
+        "value": "1.0"
+      },
+      {
+        "key": "nsfa_htl_experimental_threshold_hate_violence",
+        "value": "1.0"
+      },
+      {
+        "key": "nsfa_htl_experimental_threshold_sexual",
+        "value": "1.0"
+      },
+      {
+        "key": "website_card_variation",
+        "value": "0"
+      }
+    ],
+    "impressionId": "dccf643fad16b5f",
+    "impressionString": "dccf643fad16b5f",
+    "clickTrackingInfo": {
+      "urlParams": [
+        {
+          "key": "twclid",
+          "value": "2141q5ih7ms1i83mjyhq3gzy7o"
+        }
+      ]
+    }
+  }
+}

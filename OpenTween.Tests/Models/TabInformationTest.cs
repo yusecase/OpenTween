@@ -25,6 +25,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
+using OpenTween.SocialProtocol;
 using Xunit;
 using Xunit.Extensions;
 
@@ -69,6 +70,18 @@ namespace OpenTween.Models
             var ret = this.tabinfo.AddTab(new FilterTabModel("Recent"));
 
             Assert.False(ret);
+        }
+
+        [Fact]
+        public void AddTab_FirstTabTest()
+        {
+            var tabinfo = new TabInformations();
+            var tab = new PublicSearchTabModel("hoge");
+
+            tabinfo.AddTab(tab);
+
+            Assert.Equal("hoge", tabinfo.SelectedTabName);
+            Assert.Same(tab, tabinfo.SelectedTab);
         }
 
         [Fact]
@@ -528,93 +541,8 @@ namespace OpenTween.Models
         }
 
         [Fact]
-        public void IsMuted_Test()
+        public void IsGlobalMuted_MuteTabRules_Test()
         {
-            this.tabinfo.MuteUserIds = new HashSet<long> { 12345L };
-
-            var post = new PostClass
-            {
-                UserId = 12345L,
-                Text = "hogehoge",
-            };
-            Assert.True(this.tabinfo.IsMuted(post, isHomeTimeline: true));
-        }
-
-        [Fact]
-        public void IsMuted_NotMutingTest()
-        {
-            this.tabinfo.MuteUserIds = new HashSet<long> { 12345L };
-
-            var post = new PostClass
-            {
-                UserId = 11111L,
-                Text = "hogehoge",
-            };
-            Assert.False(this.tabinfo.IsMuted(post, isHomeTimeline: true));
-        }
-
-        [Fact]
-        public void IsMuted_RetweetTest()
-        {
-            this.tabinfo.MuteUserIds = new HashSet<long> { 12345L };
-
-            var post = new PostClass
-            {
-                UserId = 11111L,
-                RetweetedByUserId = 12345L,
-                Text = "hogehoge",
-            };
-            Assert.True(this.tabinfo.IsMuted(post, isHomeTimeline: true));
-        }
-
-        [Fact]
-        public void IsMuted_RetweetNotMutingTest()
-        {
-            this.tabinfo.MuteUserIds = new HashSet<long> { 12345L };
-
-            var post = new PostClass
-            {
-                UserId = 11111L,
-                RetweetedByUserId = 22222L,
-                Text = "hogehoge",
-            };
-            Assert.False(this.tabinfo.IsMuted(post, isHomeTimeline: true));
-        }
-
-        [Fact]
-        public void IsMuted_ReplyTest()
-        {
-            this.tabinfo.MuteUserIds = new HashSet<long> { 12345L };
-
-            // ミュート対象のユーザーであってもリプライの場合は対象外とする
-            var post = new PostClass
-            {
-                UserId = 12345L,
-                Text = "@foo hogehoge",
-                IsReply = true,
-            };
-            Assert.False(this.tabinfo.IsMuted(post, isHomeTimeline: true));
-        }
-
-        [Fact]
-        public void IsMuted_NotInHomeTimelineTest()
-        {
-            this.tabinfo.MuteUserIds = new HashSet<long> { 12345L };
-
-            // Recent以外のタブ（検索など）の場合は対象外とする
-            var post = new PostClass
-            {
-                UserId = 12345L,
-                Text = "hogehoge",
-            };
-            Assert.False(this.tabinfo.IsMuted(post, isHomeTimeline: false));
-        }
-
-        [Fact]
-        public void IsMuted_MuteTabRulesTest()
-        {
-            this.tabinfo.MuteUserIds = new HashSet<long> { };
-
             var muteTab = new MuteTabModel();
             muteTab.AddFilter(new PostFilterRule
             {
@@ -625,18 +553,16 @@ namespace OpenTween.Models
 
             var post = new PostClass
             {
-                UserId = 12345L,
+                UserId = new TwitterUserId("12345"),
                 ScreenName = "foo",
                 Text = "hogehoge",
             };
-            Assert.True(this.tabinfo.IsMuted(post, isHomeTimeline: true));
+            Assert.True(this.tabinfo.IsGlobalMuted(post));
         }
 
         [Fact]
-        public void IsMuted_MuteTabRules_NotInHomeTimelineTest()
+        public void IsGlobalMuted_MuteTabRules_NotFilteredTest()
         {
-            this.tabinfo.MuteUserIds = new HashSet<long> { };
-
             var muteTab = new MuteTabModel();
             muteTab.AddFilter(new PostFilterRule
             {
@@ -645,15 +571,14 @@ namespace OpenTween.Models
             });
             this.tabinfo.AddTab(muteTab);
 
-            // ミュートタブによるミュートはリプライも対象とする
+            // フィルタ条件に合致しない投稿
             var post = new PostClass
             {
-                UserId = 12345L,
-                ScreenName = "foo",
-                Text = "@hoge hogehoge",
-                IsReply = true,
+                UserId = new TwitterUserId("67890"),
+                ScreenName = "bar",
+                Text = "hogehoge",
             };
-            Assert.True(this.tabinfo.IsMuted(post, isHomeTimeline: false));
+            Assert.False(this.tabinfo.IsGlobalMuted(post));
         }
 
         [Fact]
@@ -1275,19 +1200,20 @@ namespace OpenTween.Models
         [Fact]
         public void RefreshOwl_HomeTabTest()
         {
+            var accountKey = AccountKey.New();
             var post = new PostClass
             {
                 StatusId = new TwitterStatusId("100"),
                 ScreenName = "aaa",
-                UserId = 123L,
+                UserId = new TwitterUserId("123"),
                 IsOwl = true,
             };
             this.tabinfo.AddPost(post);
             this.tabinfo.DistributePosts();
             this.tabinfo.SubmitUpdate();
 
-            var followerIds = new HashSet<long> { 123L };
-            this.tabinfo.RefreshOwl(followerIds);
+            var followerIds = new HashSet<PersonId> { new TwitterUserId("123") };
+            this.tabinfo.RefreshOwl(accountKey, followerIds, isPrimary: true);
 
             Assert.False(post.IsOwl);
         }
@@ -1295,6 +1221,7 @@ namespace OpenTween.Models
         [Fact]
         public void RefreshOwl_InnerStoregeTabTest()
         {
+            var accountKey = AccountKey.New();
             var tab = new PublicSearchTabModel("search");
             this.tabinfo.AddTab(tab);
 
@@ -1302,15 +1229,15 @@ namespace OpenTween.Models
             {
                 StatusId = new TwitterStatusId("100"),
                 ScreenName = "aaa",
-                UserId = 123L,
+                UserId = new TwitterUserId("123"),
                 IsOwl = true,
             };
             tab.AddPostQueue(post);
             this.tabinfo.DistributePosts();
             this.tabinfo.SubmitUpdate();
 
-            var followerIds = new HashSet<long> { 123L };
-            this.tabinfo.RefreshOwl(followerIds);
+            var followerIds = new HashSet<PersonId> { new TwitterUserId("123") };
+            this.tabinfo.RefreshOwl(accountKey, followerIds, isPrimary: true);
 
             Assert.False(post.IsOwl);
         }
@@ -1318,19 +1245,69 @@ namespace OpenTween.Models
         [Fact]
         public void RefreshOwl_UnfollowedTest()
         {
+            var accountKey = AccountKey.New();
             var post = new PostClass
             {
                 StatusId = new TwitterStatusId("100"),
                 ScreenName = "aaa",
-                UserId = 123L,
+                UserId = new TwitterUserId("123"),
                 IsOwl = false,
             };
             this.tabinfo.AddPost(post);
             this.tabinfo.DistributePosts();
             this.tabinfo.SubmitUpdate();
 
-            var followerIds = new HashSet<long> { 456L };
-            this.tabinfo.RefreshOwl(followerIds);
+            var followerIds = new HashSet<PersonId> { new TwitterUserId("456") };
+            this.tabinfo.RefreshOwl(accountKey, followerIds, isPrimary: true);
+
+            Assert.True(post.IsOwl);
+        }
+
+        [Fact]
+        public void RefreshOwl_SecondaryAccountTabTest()
+        {
+            var accountKey = AccountKey.New();
+            var tab = new HomeSpecifiedAccountTabModel("secondary", accountKey);
+            this.tabinfo.AddTab(tab);
+
+            var post = new PostClass
+            {
+                StatusId = new TwitterStatusId("100"),
+                ScreenName = "aaa",
+                UserId = new TwitterUserId("234"),
+                IsOwl = true,
+            };
+            tab.AddPostQueue(post);
+            this.tabinfo.DistributePosts();
+            this.tabinfo.SubmitUpdate();
+
+            var followerIds = new HashSet<PersonId> { new TwitterUserId("123") };
+            this.tabinfo.RefreshOwl(accountKey, followerIds, isPrimary: false);
+
+            Assert.True(post.IsOwl);
+        }
+
+        [Fact]
+        public void RefreshOwl_SecondaryAccountTab_AccountNotMatchedTest()
+        {
+            var accountKey = AccountKey.New();
+            var tab = new HomeSpecifiedAccountTabModel("secondary", accountKey);
+            this.tabinfo.AddTab(tab);
+
+            var post = new PostClass
+            {
+                StatusId = new TwitterStatusId("100"),
+                ScreenName = "aaa",
+                UserId = new TwitterUserId("234"),
+                IsOwl = true,
+            };
+            tab.AddPostQueue(post);
+            this.tabinfo.DistributePosts();
+            this.tabinfo.SubmitUpdate();
+
+            var otherAccountKey = AccountKey.New(); // 他アカウントの followerIds なので IsOwl は更新されない
+            var followerIds = new HashSet<PersonId> { new TwitterUserId("123") };
+            this.tabinfo.RefreshOwl(otherAccountKey, followerIds, isPrimary: false);
 
             Assert.True(post.IsOwl);
         }
@@ -1377,15 +1354,6 @@ namespace OpenTween.Models
             this.tabinfo.AddTab(tab1);
             this.tabinfo.AddTab(tab2);
             Assert.Equal(new[] { tab1, tab2 }, this.tabinfo.GetTabsByType(MyCommon.TabUsageType.PublicSearch));
-        }
-
-        [Fact]
-        public void GetTabsInnerStorageType_Test()
-        {
-            Assert.Equal(
-                new TabModel[] { this.tabinfo.DirectMessageTab },
-                this.tabinfo.GetTabsInnerStorageType()
-            );
         }
 
         [Fact]

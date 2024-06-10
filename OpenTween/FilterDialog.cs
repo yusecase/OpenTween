@@ -39,6 +39,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using OpenTween.Models;
+using OpenTween.SocialProtocol.Twitter;
 
 namespace OpenTween
 {
@@ -983,7 +984,11 @@ namespace OpenTween
                         using var dialog = new WaitingDialog(Properties.Resources.ListsGetting);
                         var cancellationToken = dialog.EnableCancellation();
 
-                        var task = ((TweenMain)this.Owner).TwitterInstance.GetListsApi();
+                        var account = ((TweenMain)this.Owner).CurrentTabAccount;
+                        if (account is not TwitterAccount twitterAccount)
+                            throw new WebApiException($"Unsupported account type: {account.AccountType}");
+
+                        var task = twitterAccount.Legacy.GetListsApi();
                         await dialog.WaitForAsync(this, task);
 
                         cancellationToken.ThrowIfCancellationRequested();

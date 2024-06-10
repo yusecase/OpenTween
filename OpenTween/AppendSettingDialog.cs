@@ -32,7 +32,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using OpenTween.Api;
 using OpenTween.Connection;
 using OpenTween.Models;
 using OpenTween.Setting.Panel;
@@ -47,8 +46,8 @@ namespace OpenTween
         {
             this.InitializeComponent();
 
-            this.BasedPanel.StartAuthButton.Click += this.StartAuthButton_Click;
-            this.BasedPanel.CreateAccountButton.Click += this.CreateAccountButton_Click;
+            this.BasedPanel.ApplyNetworkSettings = this.ApplyNetworkSettings;
+            this.BasedPanel.OpenInBrowser = this.OpenInBrowser;
             this.GetPeriodPanel.CheckPostAndGet.CheckedChanged += this.CheckPostAndGet_CheckedChanged;
             this.ActionPanel.UReadMng.CheckedChanged += this.UReadMng_CheckedChanged;
 
@@ -115,7 +114,8 @@ namespace OpenTween
         {
             if (MyCommon.EndingFlag) return;
 
-            if (this.BasedPanel.AuthUserCombo.SelectedIndex == -1 && e.CloseReason == CloseReason.None)
+            var primaryAccountExists = this.BasedPanel.AccountsList.Any(x => x.IsPrimary);
+            if (!primaryAccountExists && e.CloseReason == CloseReason.None)
             {
                 if (MessageBox.Show(Properties.Resources.Setting_FormClosing1, "Confirm", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.Cancel)
                 {
@@ -151,7 +151,7 @@ namespace OpenTween
             this.TreeViewSetting.SelectedNode = this.TreeViewSetting.Nodes[0];
             this.TreeViewSetting.ExpandAll();
 
-            this.ActiveControl = this.BasedPanel.StartAuthButton;
+            this.ActiveControl = this.BasedPanel.AddAccountButton;
         }
 
         private void UReadMng_CheckedChanged(object sender, EventArgs e)
@@ -163,75 +163,6 @@ namespace OpenTween
             else
             {
                 this.StartupPanel.StartupReaded.Enabled = false;
-            }
-        }
-
-        private async void StartAuthButton_Click(object sender, EventArgs e)
-        {
-            using (ControlTransaction.Disabled(this.BasedPanel.StartAuthButton))
-            {
-                try
-                {
-                    this.ApplyNetworkSettings();
-
-                    var appToken = this.SelectAuthType();
-                    if (appToken == null)
-                        return;
-
-                    UserAccount newAccount;
-                    if (appToken.AuthType == APIAuthType.TwitterComCookie)
-                    {
-                        newAccount = new()
-                        {
-                            TwitterAuthType = appToken.AuthType,
-                            TwitterComCookie = appToken.TwitterComCookie,
-                        };
-
-                        using var twitterApi = new TwitterApi();
-                        twitterApi.Initialize(new TwitterCredentialCookie(appToken), 0L, "");
-                        var twitterUser = await twitterApi.AccountVerifyCredentials();
-                        newAccount.UserId = twitterUser.Id;
-                        newAccount.Username = twitterUser.ScreenName;
-                    }
-                    else
-                    {
-                        var account = await this.PinAuth(appToken);
-                        if (account == null)
-                            return;
-                        newAccount = account;
-                    }
-
-                    var authUserCombo = this.BasedPanel.AuthUserCombo;
-
-                    var oldAccount = authUserCombo.Items.Cast<UserAccount>()
-                        .FirstOrDefault(x => x.UserId == newAccount.UserId);
-
-                    int idx;
-                    if (oldAccount != null)
-                    {
-                        idx = authUserCombo.Items.IndexOf(oldAccount);
-                        authUserCombo.Items[idx] = newAccount;
-                    }
-                    else
-                    {
-                        idx = authUserCombo.Items.Add(newAccount);
-                    }
-
-                    authUserCombo.SelectedIndex = idx;
-
-                    MessageBox.Show(
-                        this,
-                        Properties.Resources.AuthorizeButton_Click1,
-                        "Authenticate",
-                        MessageBoxButtons.OK);
-                }
-                catch (TwitterApiException ex)
-                {
-                    var message = Properties.Resources.AuthorizeButton_Click2 + Environment.NewLine +
-                        string.Join(Environment.NewLine, ex.LongMessages);
-
-                    MessageBox.Show(this, message, "Authenticate", MessageBoxButtons.OK);
-                }
             }
         }
 
@@ -265,40 +196,10 @@ namespace OpenTween
             TwitterApiConnection.RestApiHost = this.ConnectionPanel.TwitterAPIText.Text.Trim();
         }
 
-        private TwitterAppToken? SelectAuthType()
+        private async Task OpenInBrowser(IWin32Window? owner, Uri uri)
         {
-            using var dialog = new AuthTypeSelectDialog();
-
-            var ret = dialog.ShowDialog(this);
-            if (ret != DialogResult.OK)
-                return null;
-
-            return dialog.Result;
-        }
-
-        private async Task<UserAccount?> PinAuth(TwitterAppToken appToken)
-        {
-            var requestToken = await TwitterApiConnection.GetRequestTokenAsync(appToken);
-
-            var pinPageUrl = TwitterApiConnection.GetAuthorizeUri(requestToken);
-
             var browserPath = this.ActionPanel.BrowserPathText.Text;
-            var pin = AuthDialog.DoAuth(this, pinPageUrl, browserPath);
-            if (MyCommon.IsNullOrEmpty(pin))
-                return null; // キャンセルされた場合
-
-            var accessTokenResponse = await TwitterApiConnection.GetAccessTokenAsync(requestToken, pin);
-
-            return new UserAccount
-            {
-                TwitterAuthType = appToken.AuthType,
-                TwitterOAuth1ConsumerKey = appToken.OAuth1CustomConsumerKey?.Value ?? "",
-                TwitterOAuth1ConsumerSecret = appToken.OAuth1CustomConsumerSecret?.Value ?? "",
-                Username = accessTokenResponse["screen_name"],
-                UserId = long.Parse(accessTokenResponse["user_id"]),
-                Token = accessTokenResponse["oauth_token"],
-                TokenSecret = accessTokenResponse["oauth_token_secret"],
-            };
+            await MyCommon.OpenInBrowserAsync(owner, browserPath, uri);
         }
 
         private void CheckPostAndGet_CheckedChanged(object sender, EventArgs e)
@@ -317,15 +218,6 @@ namespace OpenTween
             this.GetPeriodPanel.LabelPostAndGet.Visible = this.GetPeriodPanel.CheckPostAndGet.Checked;
             this.GetPeriodPanel.UpdateTabCounts(TabInformations.GetInstance());
         }
-
-        private async Task OpenUrl(string url)
-        {
-            var browserPathWithArgs = this.ActionPanel.BrowserPathText.Text;
-            await MyCommon.OpenInBrowserAsync(this, browserPathWithArgs, url);
-        }
-
-        private async void CreateAccountButton_Click(object sender, EventArgs e)
-            => await this.OpenUrl("https://twitter.com/signup");
 
         private void GetPeriodPanel_IntervalChanged(object sender, IntervalChangedEventArgs e)
             => this.IntervalChanged?.Invoke(sender, e);

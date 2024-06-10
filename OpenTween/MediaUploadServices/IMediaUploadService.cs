@@ -52,6 +52,11 @@ namespace OpenTween.MediaUploadServices
         bool CanUseAltText { get; }
 
         /// <summary>
+        /// 発言の投稿に使うサービス自身が提供しているアップロード先か
+        /// </summary>
+        bool IsNativeUploadService { get; }
+
+        /// <summary>
         /// ファイルの拡張子からアップロード可能なフォーマットであるかを判定します
         /// </summary>
         /// <param name="fileExtension">アップロードするファイルの拡張子 (ピリオドを含む)</param>

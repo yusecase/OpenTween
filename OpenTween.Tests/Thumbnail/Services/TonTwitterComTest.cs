@@ -119,14 +119,12 @@ namespace OpenTween.Thumbnail.Services
                 .ReturnsAsync(response);
 
             var apiConnection = mock.Object;
-            var thumb = new TonTwitterCom.Thumbnail(apiConnection)
-            {
-                MediaPageUrl = "https://ton.twitter.com/1.1/ton/data/dm/123456/123456/abcdef.jpg:large",
-                FullSizeImageUrl = "https://ton.twitter.com/1.1/ton/data/dm/123456/123456/abcdef.jpg:large",
-                ThumbnailImageUrl = "https://ton.twitter.com/1.1/ton/data/dm/123456/123456/abcdef.jpg",
-            };
+            var thumbLoader = new TonTwitterCom.ThumbnailLoader(
+                apiConnection,
+                new("https://ton.twitter.com/1.1/ton/data/dm/123456/123456/abcdef.jpg")
+            );
 
-            var result = await thumb.LoadThumbnailImageAsync(CancellationToken.None);
+            var result = await thumbLoader.Load(null!, CancellationToken.None);
             Assert.Equal(image, result);
 
             mock.VerifyAll();

@@ -28,56 +28,74 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(BasedPanel));
-            this.AuthUserCombo = new System.Windows.Forms.ComboBox();
-            this.CreateAccountButton = new System.Windows.Forms.Button();
-            this.StartAuthButton = new System.Windows.Forms.Button();
-            this.AuthClearButton = new System.Windows.Forms.Button();
-            this.Label4 = new System.Windows.Forms.Label();
+            this.AccountListLabel = new System.Windows.Forms.Label();
+            this.AccountsListBox = new System.Windows.Forms.ListBox();
+            this.AddAccountButton = new System.Windows.Forms.Button();
+            this.RemoveAccountButton = new System.Windows.Forms.Button();
+            this.MakePrimaryButton = new System.Windows.Forms.Button();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.ToggleDisabledButton = new System.Windows.Forms.Button();
+            this.contextMenuAddAccount = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.panel1.SuspendLayout();
             this.SuspendLayout();
             // 
-            // AuthUserCombo
+            // AccountListLabel
             // 
-            this.AuthUserCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.AuthUserCombo.FormattingEnabled = true;
-            resources.ApplyResources(this.AuthUserCombo, "AuthUserCombo");
-            this.AuthUserCombo.Name = "AuthUserCombo";
+            resources.ApplyResources(this.AccountListLabel, "AccountListLabel");
+            this.AccountListLabel.Name = "AccountListLabel";
             // 
-            // CreateAccountButton
+            // AccountsListBox
             // 
-            resources.ApplyResources(this.CreateAccountButton, "CreateAccountButton");
-            this.CreateAccountButton.Name = "CreateAccountButton";
-            this.CreateAccountButton.UseVisualStyleBackColor = true;
+            resources.ApplyResources(this.AccountsListBox, "AccountsListBox");
+            this.AccountsListBox.FormattingEnabled = true;
+            this.AccountsListBox.Name = "AccountsListBox";
+            this.AccountsListBox.SelectedIndexChanged += new System.EventHandler(this.AccountsListBox_SelectedIndexChanged);
             // 
-            // StartAuthButton
+            // AddAccountButton
             // 
-            resources.ApplyResources(this.StartAuthButton, "StartAuthButton");
-            this.StartAuthButton.Name = "StartAuthButton";
-            this.StartAuthButton.UseVisualStyleBackColor = true;
+            resources.ApplyResources(this.AddAccountButton, "AddAccountButton");
+            this.AddAccountButton.Name = "AddAccountButton";
+            this.AddAccountButton.UseVisualStyleBackColor = true;
+            this.AddAccountButton.Click += new System.EventHandler(this.AddAccountButton_Click);
             // 
-            // AuthClearButton
+            // RemoveAccountButton
             // 
-            resources.ApplyResources(this.AuthClearButton, "AuthClearButton");
-            this.AuthClearButton.Name = "AuthClearButton";
-            this.AuthClearButton.UseVisualStyleBackColor = true;
-            this.AuthClearButton.Click += new System.EventHandler(this.AuthClearButton_Click);
+            resources.ApplyResources(this.RemoveAccountButton, "RemoveAccountButton");
+            this.RemoveAccountButton.Name = "RemoveAccountButton";
+            this.RemoveAccountButton.UseVisualStyleBackColor = true;
+            this.RemoveAccountButton.Click += new System.EventHandler(this.RemoveAccountButton_Click);
             // 
-            // Label4
+            // MakePrimaryButton
             // 
-            resources.ApplyResources(this.Label4, "Label4");
-            this.Label4.Name = "Label4";
+            resources.ApplyResources(this.MakePrimaryButton, "MakePrimaryButton");
+            this.MakePrimaryButton.Name = "MakePrimaryButton";
+            this.MakePrimaryButton.UseVisualStyleBackColor = true;
+            this.MakePrimaryButton.Click += new System.EventHandler(this.MakePrimaryButton_Click);
             // 
             // panel1
             // 
-            this.panel1.Controls.Add(this.AuthUserCombo);
-            this.panel1.Controls.Add(this.CreateAccountButton);
-            this.panel1.Controls.Add(this.StartAuthButton);
-            this.panel1.Controls.Add(this.AuthClearButton);
-            this.panel1.Controls.Add(this.Label4);
+            this.panel1.Controls.Add(this.AccountListLabel);
+            this.panel1.Controls.Add(this.AccountsListBox);
+            this.panel1.Controls.Add(this.AddAccountButton);
+            this.panel1.Controls.Add(this.RemoveAccountButton);
+            this.panel1.Controls.Add(this.MakePrimaryButton);
+            this.panel1.Controls.Add(this.ToggleDisabledButton);
             resources.ApplyResources(this.panel1, "panel1");
             this.panel1.Name = "panel1";
+            // 
+            // ToggleDisabledButton
+            // 
+            resources.ApplyResources(this.ToggleDisabledButton, "ToggleDisabledButton");
+            this.ToggleDisabledButton.Name = "ToggleDisabledButton";
+            this.ToggleDisabledButton.UseVisualStyleBackColor = true;
+            this.ToggleDisabledButton.Click += new System.EventHandler(this.ToggleDisabledButton_Click);
+            // 
+            // contextMenuAddAccount
+            // 
+            this.contextMenuAddAccount.Name = "contextMenuAddAccount";
+            resources.ApplyResources(this.contextMenuAddAccount, "contextMenuAddAccount");
             // 
             // BasedPanel
             // 
@@ -92,12 +110,13 @@
         }
 
         #endregion
-
-        internal System.Windows.Forms.ComboBox AuthUserCombo;
-        internal System.Windows.Forms.Button CreateAccountButton;
-        internal System.Windows.Forms.Button StartAuthButton;
-        internal System.Windows.Forms.Button AuthClearButton;
-        internal System.Windows.Forms.Label Label4;
+        internal System.Windows.Forms.Label AccountListLabel;
+        internal System.Windows.Forms.ListBox AccountsListBox;
+        internal System.Windows.Forms.Button AddAccountButton;
+        internal System.Windows.Forms.Button RemoveAccountButton;
+        internal System.Windows.Forms.Button MakePrimaryButton;
         private System.Windows.Forms.Panel panel1;
+        private System.Windows.Forms.ContextMenuStrip contextMenuAddAccount;
+        private System.Windows.Forms.Button ToggleDisabledButton;
     }
 }

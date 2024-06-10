@@ -194,27 +194,10 @@ namespace OpenTween
         public void GetReadableVersionTest(string fileVersion, string expected)
             => Assert.Equal(expected, MyCommon.GetReadableVersion(fileVersion));
 
-        public static readonly TheoryData<PostClass, string> GetStatusUrlTest1TestCase = new()
-        {
-            {
-                new PostClass { StatusId = new TwitterStatusId("249493863826350080"), ScreenName = "Favstar_LM", RetweetedId = null, RetweetedBy = null },
-                "https://twitter.com/Favstar_LM/status/249493863826350080"
-            },
-            {
-                new PostClass { StatusId = new TwitterStatusId("216033842434289664"), ScreenName = "haru067", RetweetedId = new TwitterStatusId("200245741443235840"), RetweetedBy = "re4k" },
-                "https://twitter.com/haru067/status/200245741443235840"
-            },
-        };
-
-        [Theory]
-        [MemberData(nameof(GetStatusUrlTest1TestCase))]
-        public void GetStatusUrlTest1(PostClass post, string expected)
-            => Assert.Equal(expected, MyCommon.GetStatusUrl(post));
-
         [Theory]
         [InlineData("Favstar_LM", 249493863826350080L, "https://twitter.com/Favstar_LM/status/249493863826350080")]
         [InlineData("haru067", 200245741443235840L, "https://twitter.com/haru067/status/200245741443235840")]
-        public void GetStatusUrlTest2(string screenName, long statusId, string expected)
+        public void GetStatusUrlTest(string screenName, long statusId, string expected)
             => Assert.Equal(expected, MyCommon.GetStatusUrl(screenName, new TwitterStatusId(statusId)));
 
         [Fact]

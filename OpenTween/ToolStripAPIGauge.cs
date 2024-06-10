@@ -72,7 +72,7 @@ namespace OpenTween
         public ApiLimit? ApiLimit
         {
             get => this.apiLimit;
-            private set
+            set
             {
                 this.apiLimit = value;
 
@@ -95,31 +95,12 @@ namespace OpenTween
             get => this.apiEndpoint;
             set
             {
-                if (MyCommon.IsNullOrEmpty(value))
-                {
-                    // リセット
-                    this.apiEndpoint = null;
-                    this.ApiLimit = null;
+                if (this.apiEndpoint == value)
                     return;
-                }
 
-                var apiLimit = MyCommon.TwitterApiInfo.AccessLimit[value];
-
-                if (this.apiEndpoint != value)
-                {
-                    // ApiEndpointが変更されているので更新する
-                    this.apiEndpoint = value;
-                    this.ApiLimit = apiLimit;
-                }
-                else
-                {
-                    // ApiLimitが変更されていれば更新する
-                    if (this.apiLimit == null ||
-                        !this.apiLimit.Equals(apiLimit))
-                    {
-                        this.ApiLimit = apiLimit;
-                    }
-                }
+                this.apiEndpoint = value;
+                this.UpdateText();
+                this.Invalidate();
             }
         }
 

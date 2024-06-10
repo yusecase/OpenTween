@@ -57,8 +57,8 @@ namespace OpenTween.Api.GraphQL
 
             var response = await request.Send(mock.Object);
             Assert.Single(response.Tweets);
-            Assert.Equal("DAABCgABGENe-W5AJxEKAAIWeWboXhcQAAgAAwAAAAEAAA", response.CursorTop);
-            Assert.Equal("DAABCgABGENe-W4__5oKAAIWK_5v3BcQAAgAAwAAAAIAAA", response.CursorBottom);
+            Assert.Equal("DAABCgABGENe-W5AJxEKAAIWeWboXhcQAAgAAwAAAAEAAA", response.CursorTop?.Value.Value);
+            Assert.Equal("DAABCgABGENe-W4__5oKAAIWK_5v3BcQAAgAAwAAAAIAAA", response.CursorBottom?.Value.Value);
 
             mock.VerifyAll();
         }
@@ -87,7 +87,7 @@ namespace OpenTween.Api.GraphQL
             var request = new HomeLatestTimelineRequest
             {
                 Count = 20,
-                Cursor = "aaa",
+                Cursor = new("aaa"),
             };
 
             await request.Send(mock.Object);

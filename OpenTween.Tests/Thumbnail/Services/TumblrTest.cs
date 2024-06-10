@@ -49,12 +49,7 @@ namespace OpenTween.Thumbnail.Services
 
             var expected = new[]
             {
-                new ThumbnailInfo
-                {
-                    MediaPageUrl = "http://example.com/post/1234567",
-                    ThumbnailImageUrl = "http://example.com/photo/1280/1234567/1/tumblr_hogehoge",
-                    TooltipText = null,
-                },
+                new ThumbnailInfo("http://example.com/post/1234567", "http://example.com/photo/1280/1234567/1/tumblr_hogehoge"),
             };
             Assert.Equal(expected, thumbs);
         }

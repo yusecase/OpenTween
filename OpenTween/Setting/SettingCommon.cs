@@ -28,6 +28,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Windows.Forms;
 using System.Xml.Serialization;
 using OpenTween.Connection;
@@ -112,7 +113,7 @@ namespace OpenTween
             return password;
         }
 
-        public long UserId = 0;
+        public string UserId = "";
         public List<string> TabList = new();
         public int TimelinePeriod = 180;
         public int ReplyPeriod = 180;
@@ -339,7 +340,7 @@ namespace OpenTween
 
             this.SelectedAccountKey = selectedAccount?.UniqueKey;
 
-            if (selectedAccount?.UserId == 0)
+            if (selectedAccount != null && MyCommon.IsNullOrEmpty(selectedAccount.UserId))
                 selectedAccount.UserId = this.UserId;
 
             if (MyCommon.IsNullOrEmpty(this.Token))
@@ -351,16 +352,31 @@ namespace OpenTween
     {
         public Guid UniqueKey { get; set; } = Guid.NewGuid();
 
-        public string Username = "";
-        public long UserId = 0;
+        [DefaultValue(false)]
+        public bool Disabled { get; set; }
 
+        [DefaultValue("Twitter")]
+        public string AccountType { get; set; } = "Twitter";
+
+        [DefaultValue("")]
+        public string ServerHostname { get; set; } = "";
+
+        [DefaultValue("")]
+        public string Username { get; set; } = "";
+
+        [DefaultValue("")]
+        public string UserId { get; set; } = "";
+
+        [DefaultValue(APIAuthType.OAuth1)]
         public APIAuthType TwitterAuthType { get; set; } = APIAuthType.OAuth1;
 
+        [DefaultValue("")]
         public string TwitterOAuth1ConsumerKey { get; set; } = "";
 
         [XmlIgnore]
         public string TwitterOAuth1ConsumerSecret { get; set; } = "";
 
+        [DefaultValue("")]
         public string TwitterOAuth1ConsumerSecretEncrypted
         {
             get => this.Encrypt(this.TwitterOAuth1ConsumerSecret);
@@ -370,22 +386,28 @@ namespace OpenTween
         [XmlIgnore]
         public string TwitterComCookie { get; set; } = "";
 
+        [DefaultValue("")]
         public string TwitterComCookieEncrypted
         {
             get => this.Encrypt(this.TwitterComCookie);
             set => this.TwitterComCookie = this.Decrypt(value);
         }
 
-        public string Token = "";
+        [DefaultValue("")]
+        public string Token { get; set; } = "";
 
         [XmlIgnore]
-        public string TokenSecret = "";
+        public string TokenSecret { get; set; } = "";
 
+        [DefaultValue("")]
         public string EncryptTokenSecret
         {
             get => this.Encrypt(this.TokenSecret);
             set => this.TokenSecret = this.Decrypt(value);
         }
+
+        [XmlArrayItem(ElementName = "Scope")]
+        public string[] Scopes { get; set; } = Array.Empty<string>();
 
         public TwitterAppToken GetTwitterAppToken()
         {

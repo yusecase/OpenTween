@@ -29,6 +29,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using OpenTween.Api;
 using OpenTween.Connection;
 using Xunit;
 
@@ -165,6 +166,16 @@ namespace OpenTween
             {
                 StatusCode = HttpStatusCode.OK,
                 Content = new ByteArrayContent(buffer),
+            };
+            return new ApiResponse(responseMessage);
+        }
+
+        public static ApiResponse CreateApiResponse<T>(T value)
+        {
+            var responseMessage = new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(JsonUtils.SerializeJsonByDataContract(value)),
             };
             return new ApiResponse(responseMessage);
         }

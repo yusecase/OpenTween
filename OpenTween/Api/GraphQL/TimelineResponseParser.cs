@@ -23,12 +23,13 @@
 
 using System.Xml.Linq;
 using System.Xml.XPath;
+using OpenTween.Models;
 
 namespace OpenTween.Api.GraphQL
 {
     public class TimelineResponseParser
     {
-        public static TimelineResponse Parse(XElement rootElm)
+        public static TimelineGraphqlResponse Parse(XElement rootElm)
         {
             ErrorResponse.ThrowIfError(rootElm);
 
@@ -36,8 +37,15 @@ namespace OpenTween.Api.GraphQL
             if (tweets.Length == 0)
                 ErrorResponse.ThrowIfContainsRateLimitMessage(rootElm);
 
-            var cursorTop = rootElm.XPathSelectElement("//content[__typename[text()='TimelineTimelineCursor']][cursorType[text()='Top']]/value")?.Value;
-            var cursorBottom = rootElm.XPathSelectElement("//content[__typename[text()='TimelineTimelineCursor']][cursorType[text()='Bottom']]/value")?.Value;
+            var cursorTopStr = rootElm.XPathSelectElement("//content[__typename[text()='TimelineTimelineCursor']][cursorType[text()='Top']]/value")?.Value;
+            var cursorTop = cursorTopStr != null
+                ? new QueryCursor<TwitterGraphqlCursor>(CursorType.Top, new(cursorTopStr))
+                : null;
+
+            var cursorBottomStr = rootElm.XPathSelectElement("//content[__typename[text()='TimelineTimelineCursor']][cursorType[text()='Bottom']]/value")?.Value;
+            var cursorBottom = cursorBottomStr != null
+                ? new QueryCursor<TwitterGraphqlCursor>(CursorType.Bottom, new(cursorBottomStr))
+                : null;
 
             return new(tweets, cursorTop, cursorBottom);
         }

@@ -36,6 +36,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using OpenTween.Setting;
+using OpenTween.SocialProtocol;
 
 namespace OpenTween.Models
 {
@@ -53,10 +54,6 @@ namespace OpenTween.Models
         private readonly ConcurrentDictionary<PostId, int> retweetsCount = new();
 
         public Stack<TabModel> RemovedTab { get; } = new();
-
-        public ISet<long> BlockIds { get; set; } = new HashSet<long>();
-
-        public ISet<long> MuteUserIds { get; set; } = new HashSet<long>();
 
         // 発言の追加
         // AddPost(複数回) -> DistributePosts          -> SubmitUpdate
@@ -110,7 +107,7 @@ namespace OpenTween.Models
                         {
                             if (tb.ListInfo.Id == list.Id)
                             {
-                                tb.ListInfo = list;
+                                tb.ListInfo = new(list);
                                 break;
                             }
                         }
@@ -133,8 +130,13 @@ namespace OpenTween.Models
                 if (this.Tabs.Contains(tab.TabName))
                     return false;
 
+                var isFirstTab = this.Tabs.Count == 0;
+
                 this.tabs.Add(tab);
                 tab.SetSortMode(this.SortMode, this.SortOrder);
+
+                if (isFirstTab)
+                    this.SelectTab(tab.TabName);
 
                 return true;
             }
@@ -147,7 +149,7 @@ namespace OpenTween.Models
                 var tb = this.GetTabByName(tabName);
                 if (tb == null || tb.IsDefaultTabType) return; // 念のため
 
-                if (!tb.IsInnerStorageTabType)
+                if (tb is not InternalStorageTabModel)
                 {
                     var homeTab = this.HomeTab;
                     var dmTab = this.DirectMessageTab;
@@ -255,7 +257,7 @@ namespace OpenTween.Models
                 MyCommon.TabUsageType.UserTimeline
                     => new UserTimelineTabModel(tabName, tabSetting.User!)
                     {
-                        UserId = tabSetting.UserId,
+                        UserId = tabSetting.UserId is { } userId ? new TwitterUserId(userId) : null,
                     },
                 MyCommon.TabUsageType.PublicSearch
                     => new PublicSearchTabModel(tabName)
@@ -571,7 +573,7 @@ namespace OpenTween.Models
 
             lock (this.lockObj)
             {
-                if (this.IsMuted(item, isHomeTimeline: true))
+                if (this.IsGlobalMuted(item))
                     return;
 
                 if (this.Posts.TryGetValue(item.StatusId, out var status))
@@ -605,9 +607,6 @@ namespace OpenTween.Models
                             return;
                     }
 
-                    if (this.BlockIds.Contains(item.UserId))
-                        return;
-
                     this.Posts.TryAdd(item.StatusId, item);
                 }
                 if (item.IsFav && this.retweetsCount.ContainsKey(item.StatusId))
@@ -618,27 +617,10 @@ namespace OpenTween.Models
             }
         }
 
-        public bool IsMuted(PostClass post, bool isHomeTimeline)
+        public bool IsGlobalMuted(PostClass post)
         {
             var muteTab = this.MuteTab;
             if (muteTab != null && muteTab.AddFiltered(post) == MyCommon.HITRESULT.Move)
-                return true;
-
-            // これ以降は Twitter 標準のミュート機能に準じた判定
-            // 参照: https://support.twitter.com/articles/20171399-muting-users-on-twitter
-
-            // ホームタイムライン以外 (検索・リストなど) は対象外
-            if (!isHomeTimeline)
-                return false;
-
-            // リプライはミュート対象外
-            if (post.IsReply)
-                return false;
-
-            if (this.MuteUserIds.Contains(post.UserId))
-                return true;
-
-            if (post.RetweetedByUserId != null && this.MuteUserIds.Contains(post.RetweetedByUserId.Value))
                 return true;
 
             return false;
@@ -658,7 +640,7 @@ namespace OpenTween.Models
         {
             lock (this.lockObj)
             {
-                if (this.IsMuted(item, isHomeTimeline: false) || this.BlockIds.Contains(item.UserId))
+                if (this.IsGlobalMuted(item))
                     return false;
 
                 this.quotes[item.StatusId] = item;
@@ -725,7 +707,7 @@ namespace OpenTween.Models
                 if (this.quotes.TryGetValue(id, out status))
                     return status;
 
-                return this.GetTabsInnerStorageType()
+                return this.GetTabsByType<InternalStorageTabModel>()
                     .Select(x => x.Posts.TryGetValue(id, out status) ? status : null)
                     .FirstOrDefault(x => x != null);
             }
@@ -856,7 +838,7 @@ namespace OpenTween.Models
             lock (this.lockObj)
             {
                 var tb = this.Tabs[tabName];
-                if (!tb.IsInnerStorageTabType)
+                if (tb is not InternalStorageTabModel)
                 {
                     foreach (var id in tb.StatusIds)
                     {
@@ -885,34 +867,29 @@ namespace OpenTween.Models
             }
         }
 
-        public void RefreshOwl(ISet<long> follower)
+        public void RefreshOwl(AccountKey accountKey, ISet<PersonId> follower, bool isPrimary)
         {
             lock (this.lockObj)
             {
-                var allPosts = this.GetTabsInnerStorageType()
-                    .SelectMany(x => x.Posts.Values)
-                    .Concat(this.Posts.Values);
+                static bool DetermineOwl(PostClass post, ISet<PersonId> followers)
+                    => !post.IsMe && followers.Count > 0 && !followers.Contains(post.UserId);
 
-                if (follower.Count > 0)
+                static bool SourceAccountKeyMatched(TabModel tab, AccountKey accountKey, bool isPrimary)
+                    => tab.SourceAccountKey == accountKey || (isPrimary && tab.SourceAccountKey == null);
+
+                if (isPrimary)
                 {
-                    foreach (var post in allPosts)
-                    {
-                        if (post.IsMe)
-                        {
-                            post.IsOwl = false;
-                        }
-                        else
-                        {
-                            post.IsOwl = !follower.Contains(post.UserId);
-                        }
-                    }
+                    foreach (var post in this.Posts.Values)
+                        post.IsOwl = DetermineOwl(post, follower);
                 }
-                else
+
+                foreach (var tab in this.GetTabsByType<InternalStorageTabModel>())
                 {
-                    foreach (var post in allPosts)
-                    {
-                        post.IsOwl = false;
-                    }
+                    if (!SourceAccountKeyMatched(tab, accountKey, isPrimary))
+                        continue;
+
+                    foreach (var post in tab.Posts.Values)
+                        post.IsOwl = DetermineOwl(post, follower);
                 }
             }
         }
@@ -962,16 +939,6 @@ namespace OpenTween.Models
         {
             lock (this.lockObj)
                 return this.Tabs.OfType<T>().ToArray();
-        }
-
-        public TabModel[] GetTabsInnerStorageType()
-        {
-            lock (this.lockObj)
-            {
-                return this.Tabs
-                    .Where(x => x.IsInnerStorageTabType)
-                    .ToArray();
-            }
         }
 
         public TabModel? GetTabByName(string tabName)

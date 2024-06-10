@@ -21,47 +21,76 @@
 
 #nullable enable
 
-using System;
 using System.Diagnostics;
 using OpenTween.Connection;
+using OpenTween.Models;
 
 namespace OpenTween.SocialProtocol.Twitter
 {
     public class TwitterAccount : ISocialAccount
     {
         private readonly OpenTween.Twitter twLegacy = new(new());
+        private TwitterApiConnection apiConnection = new();
 
-        public Guid UniqueKey { get; }
+        public string AccountType
+            => "Twitter";
+
+        public AccountKey UniqueKey { get; }
+
+        public ISocialProtocolClient Client { get; private set; }
 
         public bool IsDisposed { get; private set; }
+
+        public TwitterAccountState AccountState { get; private set; } = new();
+
+        ISocialAccountState ISocialAccount.AccountState
+            => this.AccountState;
 
         public OpenTween.Twitter Legacy
             => this.twLegacy;
 
-        public long UserId
-            => this.Legacy.UserId;
+        public PersonId UserId
+            => this.AccountState.UserId;
 
         public string UserName
-            => this.Legacy.Username;
+            => this.AccountState.UserName;
 
         public APIAuthType AuthType
             => this.Legacy.Api.AuthType;
 
         public IApiConnection Connection
-            => this.Legacy.Api.Connection;
+            => this.apiConnection;
 
-        public TwitterAccount(Guid uniqueKey)
-            => this.UniqueKey = uniqueKey;
+        public TwitterAccount(AccountKey accountKey)
+        {
+            this.UniqueKey = accountKey;
+            this.Client = this.CreateClientInstance(APIAuthType.None);
+        }
 
         public void Initialize(UserAccount accountSettings, SettingCommon settingCommon)
         {
-            Debug.Assert(accountSettings.UniqueKey == this.UniqueKey, "UniqueKey must be same as current value.");
+            Debug.Assert(accountSettings.UniqueKey == this.UniqueKey.Id, "UniqueKey must be same as current value.");
 
             var credential = accountSettings.GetTwitterCredential();
-            this.twLegacy.Initialize(credential, accountSettings.Username, accountSettings.UserId);
+            var userId = new TwitterUserId(accountSettings.UserId);
+
+            this.AccountState = new TwitterAccountState(userId, accountSettings.Username)
+            {
+                HasUnrecoverableError = credential is TwitterCredentialNone,
+            };
+
+            var newConnection = new TwitterApiConnection(credential, this.AccountState);
+            (this.apiConnection, var oldConnection) = (newConnection, this.apiConnection);
+            oldConnection.Dispose();
+
+            this.Client = this.CreateClientInstance(credential.AuthType);
+
+            this.twLegacy.Initialize(newConnection, this.AccountState);
             this.twLegacy.RestrictFavCheck = settingCommon.RestrictFavCheck;
-            this.twLegacy.ReadOwnPost = settingCommon.ReadOwnPost;
         }
+
+        public bool CanUsePostId(PostId postId)
+            => postId is TwitterStatusId or TwitterDirectMessageId;
 
         public void Dispose()
         {
@@ -70,6 +99,15 @@ namespace OpenTween.SocialProtocol.Twitter
 
             this.twLegacy.Dispose();
             this.IsDisposed = true;
+        }
+
+        private ISocialProtocolClient CreateClientInstance(APIAuthType authType)
+        {
+            return authType switch
+            {
+                APIAuthType.TwitterComCookie => new TwitterGraphqlClient(this),
+                _ => new TwitterV1Client(this),
+            };
         }
     }
 }

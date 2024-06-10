@@ -43,7 +43,7 @@ namespace OpenTween
 {
     public partial class MyLists : OTBaseForm
     {
-        private readonly TwitterApi twitterApi = null!;
+        private readonly Twitter twitter = null!;
         private readonly string contextScreenName = null!;
 
         /// <summary>自分が所有しているリスト</summary>
@@ -55,11 +55,11 @@ namespace OpenTween
         public MyLists()
             => this.InitializeComponent();
 
-        public MyLists(string screenName, TwitterApi twitterApi)
+        public MyLists(string screenName, Twitter twitter)
         {
             this.InitializeComponent();
 
-            this.twitterApi = twitterApi;
+            this.twitter = twitter;
             this.contextScreenName = screenName;
 
             this.Text = screenName + Properties.Resources.MyLists1;
@@ -92,13 +92,13 @@ namespace OpenTween
         private async Task FetchMembershipListIds()
         {
             var ownedListData = await TwitterLists.GetAllItemsAsync(x =>
-                this.twitterApi.ListsOwnerships(this.twitterApi.CurrentScreenName, cursor: x, count: 1000))
+                this.twitter.Api.ListsOwnerships(this.twitter.Username, cursor: x, count: 1000))
                     .ConfigureAwait(false);
 
             this.ownedLists = ownedListData.Select(x => new ListElement(x, null!)).ToArray();
 
             var listsUserAddedTo = await TwitterLists.GetAllItemsAsync(x =>
-                this.twitterApi.ListsMemberships(this.contextScreenName, cursor: x, count: 1000, filterToOwnedLists: true))
+                this.twitter.Api.ListsMemberships(this.contextScreenName, cursor: x, count: 1000, filterToOwnedLists: true))
                     .ConfigureAwait(false);
 
             this.addedListIds = listsUserAddedTo.Select(x => x.Id).ToArray();
@@ -108,7 +108,7 @@ namespace OpenTween
         {
             try
             {
-                await this.twitterApi.ListsMembersCreate(list.Id, this.contextScreenName)
+                await this.twitter.Api.ListsMembersCreate(list.Id, this.contextScreenName)
                     .IgnoreResponse();
 
                 var index = this.ListsCheckedListBox.Items.IndexOf(list);
@@ -124,7 +124,7 @@ namespace OpenTween
         {
             try
             {
-                await this.twitterApi.ListsMembersDestroy(list.Id, this.contextScreenName)
+                await this.twitter.Api.ListsMembersDestroy(list.Id, this.contextScreenName)
                     .IgnoreResponse();
 
                 var index = this.ListsCheckedListBox.Items.IndexOf(list);

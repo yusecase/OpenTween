@@ -22,6 +22,7 @@
 using System.Threading.Tasks;
 using Moq;
 using OpenTween.Connection;
+using OpenTween.Models;
 using Xunit;
 
 namespace OpenTween.Api.GraphQL
@@ -49,15 +50,15 @@ namespace OpenTween.Api.GraphQL
                 })
                 .ReturnsAsync(apiResponse);
 
-            var request = new UserTweetsAndRepliesRequest(userId: "40480664")
+            var request = new UserTweetsAndRepliesRequest(userId: new("40480664"))
             {
                 Count = 20,
             };
 
             var response = await request.Send(mock.Object);
             Assert.Single(response.Tweets);
-            Assert.Equal("DAABCgABF_tTnZvAJxEKAAIWes8rE1oQAAgAAwAAAAEAAA", response.CursorTop);
-            Assert.Equal("DAABCgABF_tTnZu__-0KAAIWZa6KTRoAAwgAAwAAAAIAAA", response.CursorBottom);
+            Assert.Equal("DAABCgABF_tTnZvAJxEKAAIWes8rE1oQAAgAAwAAAAEAAA", response.CursorTop?.Value.Value);
+            Assert.Equal("DAABCgABF_tTnZu__-0KAAIWZa6KTRoAAwgAAwAAAAIAAA", response.CursorBottom?.Value.Value);
 
             mock.VerifyAll();
         }
@@ -83,10 +84,10 @@ namespace OpenTween.Api.GraphQL
                 })
                 .ReturnsAsync(apiResponse);
 
-            var request = new UserTweetsAndRepliesRequest(userId: "40480664")
+            var request = new UserTweetsAndRepliesRequest(userId: new("40480664"))
             {
                 Count = 20,
-                Cursor = "aaa",
+                Cursor = new("aaa"),
             };
 
             await request.Send(mock.Object);

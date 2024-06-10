@@ -23,6 +23,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -44,9 +45,7 @@ namespace OpenTween
     /// </remarks>
     public class MemoryImage : ICloneable, IDisposable, IEquatable<MemoryImage>
     {
-        private readonly byte[] buffer;
-        private readonly int bufferOffset;
-        private readonly int bufferCount;
+        private readonly ArraySegment<byte> buffer;
         private readonly Image image;
 
         private static readonly Dictionary<ImageFormat, string> ExtensionByFormat = new()
@@ -65,15 +64,13 @@ namespace OpenTween
         /// <exception cref="InvalidImageException">
         /// ストリームから読みだされる画像データが不正な場合にスローされる
         /// </exception>
-        protected MemoryImage(byte[] buffer, int offset, int count)
+        public MemoryImage(ArraySegment<byte> buffer)
         {
             try
             {
                 this.buffer = buffer;
-                this.bufferOffset = offset;
-                this.bufferCount = count;
 
-                this.Stream = new(buffer, offset, count, writable: false);
+                this.Stream = new(buffer.Array, buffer.Offset, buffer.Count, writable: false);
                 this.image = this.CreateImage(this.Stream);
             }
             catch
@@ -146,12 +143,17 @@ namespace OpenTween
         /// </summary>
         /// <returns>複製された MemoryImage</returns>
         public MemoryImage Clone()
-            => new(this.buffer, this.bufferOffset, this.bufferCount);
+            => new(this.buffer);
 
         public override int GetHashCode()
         {
             using var sha1service = new System.Security.Cryptography.SHA1CryptoServiceProvider();
-            var hash = sha1service.ComputeHash(this.buffer, this.bufferOffset, this.bufferCount);
+
+            var rawBuffer = this.buffer.Array;
+            var offset = this.buffer.Offset;
+            var count = this.buffer.Count;
+            var hash = sha1service.ComputeHash(rawBuffer, offset, count);
+
             return Convert.ToBase64String(hash).GetHashCode();
         }
 
@@ -167,13 +169,10 @@ namespace OpenTween
                 return false;
 
             // それぞれが保持する MemoryStream の内容が等しいことを検証する
-            var selfBuffer = new ArraySegment<byte>(this.buffer, this.bufferOffset, this.bufferCount);
-            var otherBuffer = new ArraySegment<byte>(other.buffer, other.bufferOffset, other.bufferCount);
-
-            if (selfBuffer.Count != otherBuffer.Count)
+            if (this.buffer.Count != other.buffer.Count)
                 return false;
 
-            return selfBuffer.Zip(otherBuffer, (x, y) => x == y).All(x => x);
+            return this.buffer.Zip(other.buffer, (x, y) => x == y).All(x => x);
         }
 
         object ICloneable.Clone()
@@ -219,7 +218,10 @@ namespace OpenTween
 
             stream.CopyTo(memstream);
 
-            return new(memstream.GetBuffer(), 0, (int)memstream.Length);
+            var ret = memstream.TryGetBuffer(out var buffer);
+            Debug.Assert(ret, "TryGetBuffer() == true");
+
+            return new(buffer);
         }
 
         /// <summary>
@@ -239,7 +241,16 @@ namespace OpenTween
             await stream.CopyToAsync(memstream)
                 .ConfigureAwait(false);
 
-            return new(memstream.GetBuffer(), 0, (int)memstream.Length);
+            var ret = memstream.TryGetBuffer(out var buffer);
+            Debug.Assert(ret, "TryGetBuffer() == true");
+
+            if (WebpDecoder.IsWebpImage(buffer))
+            {
+                var transcoded = await WebpDecoder.ConvertFromWebp(buffer);
+                return new(transcoded);
+            }
+
+            return new(buffer);
         }
 
         /// <summary>
@@ -249,7 +260,7 @@ namespace OpenTween
         /// <returns>作成された MemoryImage</returns>
         /// <exception cref="InvalidImageException">不正な画像データが入力された場合</exception>
         public static MemoryImage CopyFromBytes(byte[] bytes)
-            => new(bytes, 0, bytes.Length);
+            => new(new(bytes));
 
         /// <summary>
         /// Image インスタンスから MemoryImage を作成します
@@ -265,7 +276,10 @@ namespace OpenTween
 
             image.Save(memstream, ImageFormat.Png);
 
-            return new(memstream.GetBuffer(), 0, (int)memstream.Length);
+            var ret = memstream.TryGetBuffer(out var buffer);
+            Debug.Assert(ret, "TryGetBuffer() == true");
+
+            return new(buffer);
         }
     }
 

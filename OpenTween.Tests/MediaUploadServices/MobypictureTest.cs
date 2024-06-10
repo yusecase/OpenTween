@@ -45,13 +45,11 @@ namespace OpenTween.MediaUploadServices
             mockApi.Setup((x) => x.UploadFileAsync(mediaItem, "てすと"))
                 .ReturnsAsync("https://www.mobypicture.com/user/OpenTween/view/00000000");
 
-            var param = new PostStatusParams
-            {
-                Text = "てすと",
-            };
-            await mobypicture.UploadAsync(new[] { mediaItem }, param);
+            var param = new PostStatusParams(Text: "てすと");
+            param = await mobypicture.UploadAsync(new[] { mediaItem }, param);
 
-            Assert.Equal("てすと https://www.mobypicture.com/user/OpenTween/view/00000000", param.Text);
+            var expected = new PostStatusParams(Text: "てすと https://www.mobypicture.com/user/OpenTween/view/00000000");
+            Assert.Equal(expected, param);
         }
 
         [Fact]
@@ -66,10 +64,8 @@ namespace OpenTween.MediaUploadServices
             mockApi.Setup((x) => x.UploadFileAsync(mediaItem, "てすと"))
                 .Throws<WebApiException>();
 
-            var param = new PostStatusParams
-            {
-                Text = "てすと",
-            };
+            var param = new PostStatusParams(Text: "てすと");
+
             await Assert.ThrowsAsync<WebApiException>(
                 () => mobypicture.UploadAsync(new[] { mediaItem }, param)
             );
@@ -87,10 +83,8 @@ namespace OpenTween.MediaUploadServices
             mockApi.Setup((x) => x.UploadFileAsync(mediaItem, "てすと"))
                 .Throws<OperationCanceledException>();
 
-            var param = new PostStatusParams
-            {
-                Text = "てすと",
-            };
+            var param = new PostStatusParams(Text: "てすと");
+
             await Assert.ThrowsAsync<WebApiException>(
                 () => mobypicture.UploadAsync(new[] { mediaItem }, param)
             );

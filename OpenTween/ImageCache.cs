@@ -23,6 +23,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -102,16 +103,30 @@ namespace OpenTween
 
         private async Task<MemoryImage> FetchImageAsync(string uri, CancellationToken cancelToken)
         {
-            using var response = await Networking.Http.GetAsync(uri, cancelToken)
-                .ConfigureAwait(false);
+            try
+            {
+                using var response = await Networking.Http.GetAsync(uri, cancelToken)
+                    .ConfigureAwait(false);
 
-            response.EnsureSuccessStatusCode();
+                response.EnsureSuccessStatusCode();
 
-            using var imageStream = await response.Content.ReadAsStreamAsync()
-                .ConfigureAwait(false);
+                using var imageStream = await response.Content.ReadAsStreamAsync()
+                    .ConfigureAwait(false);
 
-            return await MemoryImage.CopyFromStreamAsync(imageStream)
-                .ConfigureAwait(false);
+                return await MemoryImage.CopyFromStreamAsync(imageStream)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex)
+                when (ex is HttpRequestException or OperationCanceledException or InvalidImageException)
+            {
+                return this.CreateBlankImage();
+            }
+        }
+
+        private MemoryImage CreateBlankImage()
+        {
+            using var bitmap = new Bitmap(1, 1);
+            return MemoryImage.CopyFromImage(bitmap);
         }
 
         public MemoryImage? TryGetFromCache(string address)

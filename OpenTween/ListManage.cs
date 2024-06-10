@@ -341,7 +341,7 @@ namespace OpenTween
             }
         }
 
-        private async Task LoadUserIconAsync(Uri imageUri, long userId)
+        private async Task LoadUserIconAsync(Uri imageUri, PersonId userId)
         {
             var oldImage = this.UserIcon.Image;
             this.UserIcon.Image = null;

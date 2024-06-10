@@ -55,6 +55,7 @@ using OpenTween.Api.DataModel;
 using OpenTween.Api.GraphQL;
 using OpenTween.Api.TwitterV2;
 using OpenTween.Connection;
+using OpenTween.Controls;
 using OpenTween.MediaUploadServices;
 using OpenTween.Models;
 using OpenTween.OpenTweenCustomControl;
@@ -113,12 +114,13 @@ namespace OpenTween
         // ユーザーアカウント
         private readonly AccountCollection accounts;
 
-#pragma warning disable SA1300
-        private Twitter tw => ((TwitterAccount)this.PrimaryAccount).Legacy; // AccountCollection への移行用
-#pragma warning restore SA1300
-
         private ISocialAccount PrimaryAccount
             => this.accounts.Primary;
+
+        public ISocialAccount CurrentTabAccount
+            => this.accounts.GetAccountForTab(this.CurrentTab);
+
+        private IDisposable? unsubscribeRateLimitUpdate;
 
         // Growl呼び出し部
         private readonly GrowlHelper gh = new(ApplicationSettings.ApplicationName);
@@ -315,7 +317,7 @@ namespace OpenTween
             Thumbnail.Services.TonTwitterCom.GetApiConnection = () => this.PrimaryAccount.Connection;
 
             // 画像投稿サービス
-            this.ImageSelector.Model.InitializeServices(this.tw, this.tw.Configuration);
+            this.ImageSelector.Model.InitializeServices(this.CurrentTabAccount);
             this.ImageSelector.Model.SelectMediaService(this.settings.Common.UseImageServiceName, this.settings.Common.UseImageService);
 
             this.tweetThumbnail1.Model.Initialize(this.thumbGenerator);
@@ -418,7 +420,7 @@ namespace OpenTween
             this.StatusLabel.AutoToolTip = false;
             this.StatusLabel.ToolTipText = "";
             // 文字カウンタ初期化
-            this.lblLen.Text = this.GetRestStatusCount(this.FormatStatusTextExtended("")).ToString();
+            this.lblLen.Text = this.GetRestStatusCount().ToString();
 
             this.JumpReadOpMenuItem.ShortcutKeyDisplayString = "Space";
             this.CopySTOTMenuItem.ShortcutKeyDisplayString = "Ctrl+C";
@@ -455,12 +457,13 @@ namespace OpenTween
                     throw new TabException(Properties.Resources.TweenMain_LoadText1);
             }
 
-            this.ListTabSelect(this.ListTab.SelectedTab);
+            this.ListTabSelect(this.statuses.SelectedTabName);
 
             // タブの位置を調整する
             this.SetTabAlignment();
 
-            MyCommon.TwitterApiInfo.AccessLimitUpdated += this.TwitterApiStatus_AccessLimitUpdated;
+            this.SubscribePrimaryAccountRatelimit();
+
             Microsoft.Win32.SystemEvents.TimeChanged += this.SystemEvents_TimeChanged;
 
             if (this.settings.Common.TabIconDisp)
@@ -505,20 +508,17 @@ namespace OpenTween
 
             // タイマー設定
 
-            this.timelineScheduler.UpdateFunc[TimelineSchedulerTaskType.Home] = () => this.InvokeAsync(() => this.RefreshTabAsync<HomeTabModel>());
+            this.timelineScheduler.UpdateFunc[TimelineSchedulerTaskType.Home] = () => this.InvokeAsync(() => Task.WhenAll(new[]
+            {
+                this.RefreshTabAsync<HomeTabModel>(),
+                this.RefreshTabAsync<HomeSpecifiedAccountTabModel>(),
+            }));
             this.timelineScheduler.UpdateFunc[TimelineSchedulerTaskType.Mention] = () => this.InvokeAsync(() => this.RefreshTabAsync<MentionsTabModel>());
             this.timelineScheduler.UpdateFunc[TimelineSchedulerTaskType.Dm] = () => this.InvokeAsync(() => this.RefreshTabAsync<DirectMessagesTabModel>());
             this.timelineScheduler.UpdateFunc[TimelineSchedulerTaskType.PublicSearch] = () => this.InvokeAsync(() => this.RefreshTabAsync<PublicSearchTabModel>());
             this.timelineScheduler.UpdateFunc[TimelineSchedulerTaskType.User] = () => this.InvokeAsync(() => this.RefreshTabAsync<UserTimelineTabModel>());
             this.timelineScheduler.UpdateFunc[TimelineSchedulerTaskType.List] = () => this.InvokeAsync(() => this.RefreshTabAsync<ListTimelineTabModel>());
-            this.timelineScheduler.UpdateFunc[TimelineSchedulerTaskType.Config] = () => this.InvokeAsync(() => Task.WhenAll(new[]
-            {
-                this.DoGetFollowersMenu(),
-                this.RefreshBlockIdsAsync(),
-                this.RefreshMuteUserIdsAsync(),
-                this.RefreshNoRetweetIdsAsync(),
-                this.RefreshTwitterConfigurationAsync(),
-            }));
+            this.timelineScheduler.UpdateFunc[TimelineSchedulerTaskType.Config] = () => this.InvokeAsync(() => this.RefreshConfigurationAsync());
             this.RefreshTimelineScheduler();
 
             this.selectionDebouncer = DebounceTimer.Create(() => this.InvokeAsync(() => this.UpdateSelectedPost()), TimeSpan.FromMilliseconds(100), leading: true);
@@ -567,6 +567,7 @@ namespace OpenTween
                 this.timelineScheduler.Dispose();
                 this.workerCts.Cancel();
                 this.thumbnailTokenSource?.Dispose();
+                this.unsubscribeRateLimitUpdate?.Dispose();
 
                 this.hookGlobalHotkey.Dispose();
             }
@@ -575,7 +576,6 @@ namespace OpenTween
             // http://msdn.microsoft.com/ja-jp/library/microsoft.win32.systemevents.powermodechanged.aspx
             Microsoft.Win32.SystemEvents.PowerModeChanged -= this.SystemEvents_PowerModeChanged;
             Microsoft.Win32.SystemEvents.TimeChanged -= this.SystemEvents_TimeChanged;
-            MyCommon.TwitterApiInfo.AccessLimitUpdated -= this.TwitterApiStatus_AccessLimitUpdated;
 
             this.disposed = true;
         }
@@ -867,7 +867,8 @@ namespace OpenTween
             this.SetMainWindowTitle();
             if (!this.StatusLabelUrl.Text.StartsWith("http", StringComparison.Ordinal)) this.SetStatusLabelUrl();
 
-            this.HashSupl.AddRangeItem(this.tw.GetHashList());
+            if (this.CurrentTabAccount is TwitterAccount twAccount)
+                this.HashSupl.AddRangeItem(twAccount.Legacy.GetHashList());
         }
 
         private bool BalloonRequired()
@@ -1151,43 +1152,15 @@ namespace OpenTween
             this.StatusText.SelectionStart = this.StatusText.Text.Length;
             this.CheckReplyTo(this.StatusText.Text);
 
-            var status = new PostStatusParams();
-
-            var statusTextCompat = this.FormatStatusText(this.StatusText.Text);
-            if (this.GetRestStatusCount(statusTextCompat) >= 0 && this.tw.Api.AuthType == APIAuthType.OAuth1)
-            {
-                // auto_populate_reply_metadata や attachment_url を使用しなくても 140 字以内に
-                // 収まる場合はこれらのオプションを使用せずに投稿する
-                status.Text = statusTextCompat;
-                status.InReplyToStatusId = this.inReplyTo?.StatusId;
-            }
-            else
-            {
-                status.Text = this.FormatStatusTextExtended(this.StatusText.Text, out var autoPopulatedUserIds, out var attachmentUrl);
-                status.InReplyToStatusId = this.inReplyTo?.StatusId;
-
-                status.AttachmentUrl = attachmentUrl;
-
-                // リプライ先がセットされていても autoPopulatedUserIds が空の場合は auto_populate_reply_metadata を有効にしない
-                //  (非公式 RT の場合など)
-                var replyToPost = this.inReplyTo != null ? this.statuses[this.inReplyTo.Value.StatusId] : null;
-                if (replyToPost != null && autoPopulatedUserIds.Length != 0)
-                {
-                    status.AutoPopulateReplyMetadata = true;
-
-                    // ReplyToList のうち autoPopulatedUserIds に含まれていないユーザー ID を抽出
-                    status.ExcludeReplyUserIds = replyToPost.ReplyToList.Select(x => x.UserId).Except(autoPopulatedUserIds)
-                        .ToArray();
-                }
-            }
-
-            if (this.GetRestStatusCount(status.Text) < 0)
+            if (this.GetRestStatusCount() < 0)
             {
                 // 文字数制限を超えているが強制的に投稿するか
                 var ret = MessageBox.Show(Properties.Resources.PostLengthOverMessage1, Properties.Resources.PostLengthOverMessage2, MessageBoxButtons.OKCancel, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
                 if (ret != DialogResult.OK)
                     return;
             }
+
+            var status = this.CreatePostStatusParams();
 
             IMediaUploadService? uploadService = null;
             IMediaItem[]? uploadItems = null;
@@ -1255,22 +1228,22 @@ namespace OpenTween
             this.BringToFront();
         }
 
-        private static int errorCount = 0;
+        private int errorCount = 0;
 
-        private static bool CheckAccountValid()
+        private bool CheckAccountValid()
         {
-            if (Twitter.AccountState != MyCommon.ACCOUNT_STATE.Valid)
+            if (this.CurrentTabAccount.AccountState.HasUnrecoverableError)
             {
-                errorCount += 1;
-                if (errorCount > 5)
+                this.errorCount += 1;
+                if (this.errorCount > 5)
                 {
-                    errorCount = 0;
-                    Twitter.AccountState = MyCommon.ACCOUNT_STATE.Valid;
+                    this.errorCount = 0;
+                    this.CurrentTabAccount.AccountState.HasUnrecoverableError = false;
                     return true;
                 }
                 return false;
             }
-            errorCount = 0;
+            this.errorCount = 0;
             return true;
         }
 
@@ -1301,8 +1274,14 @@ namespace OpenTween
 
             try
             {
+                var accountForTab = this.accounts.GetAccountForTab(tab);
+                if (accountForTab is InvalidAccount)
+                    return;
+
                 this.RefreshTasktrayIcon();
-                await Task.Run(() => tab.RefreshAsync(this.tw, backward, this.initial, this.workerProgress));
+                await Task.Run(
+                    () => tab.RefreshAsync(accountForTab, backward, this.workerProgress)
+                );
                 tab.IncrementUpdateCount();
             }
             catch (WebApiException ex)
@@ -1356,7 +1335,7 @@ namespace OpenTween
             if (ct.IsCancellationRequested)
                 return;
 
-            if (!CheckAccountValid())
+            if (!this.CheckAccountValid())
                 throw new WebApiException("Auth error. Check your account");
 
             if (!tab.Posts.TryGetValue(statusId, out var post))
@@ -1371,14 +1350,16 @@ namespace OpenTween
 
                 try
                 {
-                    var twitterStatusId = (post.RetweetedId ?? post.StatusId).ToTwitterStatusId();
+                    var account = this.CurrentTabAccount;
+                    var originalPostId = post.RetweetedId ?? post.StatusId;
 
-                    await this.tw.PostFavAdd(twitterStatusId)
+                    await account.Client.FavoritePost(originalPostId)
                         .ConfigureAwait(false);
 
-                    if (this.settings.Common.RestrictFavCheck)
+                    if (this.settings.Common.RestrictFavCheck && account is TwitterAccount twAccount)
                     {
-                        var status = await this.tw.Api.StatusesShow(twitterStatusId)
+                        var twitterStatusId = originalPostId.ToTwitterStatusId();
+                        var status = await twAccount.Legacy.Api.StatusesShow(twitterStatusId)
                             .ConfigureAwait(false);
 
                         if (status.Favorited != true)
@@ -1397,7 +1378,7 @@ namespace OpenTween
                     }
 
                     // 検索,リスト,UserTimeline,Relatedの各タブに反映
-                    foreach (var tb in this.statuses.GetTabsInnerStorageType())
+                    foreach (var tb in this.statuses.GetTabsByType<InternalStorageTabModel>())
                     {
                         if (tb.Contains(statusId))
                             tb.Posts[statusId].IsFav = true;
@@ -1469,7 +1450,7 @@ namespace OpenTween
             if (ct.IsCancellationRequested)
                 return;
 
-            if (!CheckAccountValid())
+            if (!this.CheckAccountValid())
                 throw new WebApiException("Auth error. Check your account");
 
             var successIds = new List<PostId>();
@@ -1490,11 +1471,12 @@ namespace OpenTween
                     if (!post.IsFav)
                         continue;
 
-                    var twitterStatusId = (post.RetweetedId ?? post.StatusId).ToTwitterStatusId();
-
                     try
                     {
-                        await this.tw.PostFavRemove(twitterStatusId);
+                        var originalPostId = post.RetweetedId ?? post.StatusId;
+
+                        await this.CurrentTabAccount.Client.UnfavoritePost(originalPostId)
+                            .ConfigureAwait(false);
                     }
                     catch (WebApiException)
                     {
@@ -1509,7 +1491,7 @@ namespace OpenTween
                         tabinfoPost.IsFav = false;
 
                     // 検索,リスト,UserTimeline,Relatedの各タブに反映
-                    foreach (var tb in this.statuses.GetTabsInnerStorageType())
+                    foreach (var tb in this.statuses.GetTabsByType<InternalStorageTabModel>())
                     {
                         if (tb.Contains(statusId))
                             tb.Posts[statusId].IsFav = false;
@@ -1586,11 +1568,12 @@ namespace OpenTween
             if (ct.IsCancellationRequested)
                 return;
 
-            if (!CheckAccountValid())
+            if (!this.CheckAccountValid())
                 throw new WebApiException("Auth error. Check your account");
 
             p.Report("Posting...");
 
+            var account = this.CurrentTabAccount;
             PostClass? post = null;
             var errMsg = "";
 
@@ -1606,7 +1589,7 @@ namespace OpenTween
                             .ConfigureAwait(false);
                     }
 
-                    post = await this.tw.PostStatus(postParamsWithMedia)
+                    post = await account.Client.CreatePost(postParamsWithMedia)
                         .ConfigureAwait(false);
                 });
 
@@ -1691,8 +1674,18 @@ namespace OpenTween
             // TLに反映
             if (post != null)
             {
-                this.statuses.AddPost(post);
-                this.statuses.DistributePosts();
+                if (account.UniqueKey == this.PrimaryAccount.UniqueKey)
+                {
+                    this.statuses.AddPost(post);
+                    this.statuses.DistributePosts();
+                }
+                else
+                {
+                    var secondaryAccountTab = this.statuses.GetTabsByType<HomeSpecifiedAccountTabModel>()
+                        .FirstOrDefault(x => x.SourceAccountKey == account.UniqueKey) ?? null;
+
+                    secondaryAccountTab?.AddPostQueue(post);
+                }
                 this.RefreshTimeline();
             }
 
@@ -1700,7 +1693,7 @@ namespace OpenTween
                 await this.RefreshTabAsync<HomeTabModel>();
         }
 
-        private async Task RetweetAsync(IReadOnlyList<PostId> statusIds)
+        private async Task RetweetAsync(IReadOnlyList<PostClass> posts)
         {
             await this.workerSemaphore.WaitAsync();
 
@@ -1709,7 +1702,7 @@ namespace OpenTween
                 var progress = new Progress<string>(x => this.StatusLabel.Text = x);
 
                 this.RefreshTasktrayIcon();
-                await this.RetweetAsyncInternal(progress, this.workerCts.Token, statusIds);
+                await this.RetweetAsyncInternal(progress, this.workerCts.Token, posts);
             }
             catch (WebApiException ex)
             {
@@ -1722,30 +1715,29 @@ namespace OpenTween
             }
         }
 
-        private async Task RetweetAsyncInternal(IProgress<string> p, CancellationToken ct, IReadOnlyList<PostId> statusIds)
+        private async Task RetweetAsyncInternal(IProgress<string> p, CancellationToken ct, IReadOnlyList<PostClass> posts)
         {
             if (ct.IsCancellationRequested)
                 return;
 
-            if (!CheckAccountValid())
+            if (!this.CheckAccountValid())
                 throw new WebApiException("Auth error. Check your account");
-
-            bool read;
-            if (!this.settings.Common.UnreadManage)
-                read = true;
-            else
-                read = this.initial && this.settings.Common.Read;
 
             p.Report("Posting...");
 
-            var posts = new List<PostClass>();
+            var retweetedPosts = new List<PostClass>();
 
             await Task.Run(async () =>
             {
-                foreach (var statusId in statusIds)
+                foreach (var post in posts)
                 {
-                    var post = await this.tw.PostRetweet(statusId, read).ConfigureAwait(false);
-                    if (post != null) posts.Add(post);
+                    var statusId = post.RetweetedId ?? post.StatusId;
+
+                    var retweetedPost = await this.CurrentTabAccount.Client.RetweetPost(statusId)
+                        .ConfigureAwait(false);
+
+                    if (retweetedPost != null)
+                        retweetedPosts.Add(retweetedPost);
                 }
             });
 
@@ -1765,7 +1757,7 @@ namespace OpenTween
 
             // 自分のRTはTLの更新では取得できない場合があるので、
             // 投稿時取得の有無に関わらず追加しておく
-            posts.ForEach(post => this.statuses.AddPost(post));
+            retweetedPosts.ForEach(post => this.statuses.AddPost(post));
 
             if (this.settings.Common.PostAndGet)
             {
@@ -1778,122 +1770,40 @@ namespace OpenTween
             }
         }
 
-        private async Task RefreshFollowerIdsAsync()
+        private async Task RefreshConfigurationAsync()
         {
             await this.workerSemaphore.WaitAsync();
 
             try
             {
                 this.RefreshTasktrayIcon();
-                this.StatusLabel.Text = Properties.Resources.UpdateFollowersMenuItem1_ClickText1;
+                this.StatusLabel.Text = Properties.Resources.RefreshConfiguration_Start;
 
-                await this.tw.RefreshFollowerIds();
+                var loadTasks =
+                    from account in this.accounts.Items
+                    select account.Client.RefreshConfiguration();
 
-                this.StatusLabel.Text = Properties.Resources.UpdateFollowersMenuItem1_ClickText3;
+                await Task.WhenAll(loadTasks);
 
-                this.RefreshTimeline();
-                this.listCache?.PurgeCache();
-                this.CurrentListView.Refresh();
-            }
-            catch (WebApiException ex)
-            {
-                this.StatusLabel.Text = $"Err:{ex.Message}(RefreshFollowersIds)";
-            }
-            finally
-            {
-                this.workerSemaphore.Release();
-            }
-        }
+                var primaryAccount = this.accounts.Primary;
+                this.statuses.RefreshOwl(primaryAccount.UniqueKey, primaryAccount.AccountState.FollowerIds, isPrimary: true);
 
-        private async Task RefreshNoRetweetIdsAsync()
-        {
-            await this.workerSemaphore.WaitAsync();
-
-            try
-            {
-                this.RefreshTasktrayIcon();
-                await this.tw.RefreshNoRetweetIds();
-
-                this.StatusLabel.Text = "NoRetweetIds refreshed";
-            }
-            catch (WebApiException ex)
-            {
-                this.StatusLabel.Text = $"Err:{ex.Message}(RefreshNoRetweetIds)";
-            }
-            finally
-            {
-                this.workerSemaphore.Release();
-            }
-        }
-
-        private async Task RefreshBlockIdsAsync()
-        {
-            await this.workerSemaphore.WaitAsync();
-
-            try
-            {
-                this.RefreshTasktrayIcon();
-                this.StatusLabel.Text = Properties.Resources.UpdateBlockUserText1;
-
-                await this.tw.RefreshBlockIds();
-
-                this.StatusLabel.Text = Properties.Resources.UpdateBlockUserText3;
-            }
-            catch (WebApiException ex)
-            {
-                this.StatusLabel.Text = $"Err:{ex.Message}(RefreshBlockIds)";
-            }
-            finally
-            {
-                this.workerSemaphore.Release();
-            }
-        }
-
-        private async Task RefreshTwitterConfigurationAsync()
-        {
-            await this.workerSemaphore.WaitAsync();
-
-            try
-            {
-                this.RefreshTasktrayIcon();
-                await this.tw.RefreshConfiguration();
-
-                if (this.tw.Configuration.PhotoSizeLimit != 0)
-                {
-                    foreach (var (_, service) in this.ImageSelector.Model.MediaServices)
-                    {
-                        service.UpdateTwitterConfiguration(this.tw.Configuration);
-                    }
-                }
+                foreach (var account in this.accounts.SecondaryAccounts)
+                    this.statuses.RefreshOwl(account.UniqueKey, account.AccountState.FollowerIds, isPrimary: false);
 
                 this.listCache?.PurgeCache();
                 this.CurrentListView.Refresh();
+
+                this.StatusLabel.Text = Properties.Resources.RefreshConfiguration_Success;
             }
             catch (WebApiException ex)
             {
-                this.StatusLabel.Text = $"Err:{ex.Message}(RefreshConfiguration)";
+                this.StatusLabel.Text = Properties.Resources.RefreshConfiguration_Error + ex.Message;
             }
             finally
             {
                 this.workerSemaphore.Release();
             }
-        }
-
-        private async Task RefreshMuteUserIdsAsync()
-        {
-            this.StatusLabel.Text = Properties.Resources.UpdateMuteUserIds_Start;
-
-            try
-            {
-                await this.tw.RefreshMuteUserIdsAsync();
-            }
-            catch (WebApiException ex)
-            {
-                this.StatusLabel.Text = string.Format(Properties.Resources.UpdateMuteUserIds_Error, ex.Message);
-                return;
-            }
-
-            this.StatusLabel.Text = Properties.Resources.UpdateMuteUserIds_Finish;
         }
 
         private void NotifyIcon1_MouseClick(object sender, MouseEventArgs e)
@@ -2217,7 +2127,7 @@ namespace OpenTween
                 this.StatusOpenMenuItem.Enabled = true;
                 this.ShowRelatedStatusesMenuItem.Enabled = true;  // PublicSearchの時問題出るかも
 
-                if (!post.CanRetweetBy(this.PrimaryAccount.UserId))
+                if (!post.CanRetweetBy(this.CurrentTabAccount.UserId))
                 {
                     this.ReTweetStripMenuItem.Enabled = false;
                     this.ReTweetUnofficialStripMenuItem.Enabled = false;
@@ -2246,7 +2156,7 @@ namespace OpenTween
 
             if (this.ExistCurrentPost && post != null)
             {
-                var primaryUserId = this.PrimaryAccount.UserId;
+                var primaryUserId = this.CurrentTabAccount.UserId;
                 this.DeleteStripMenuItem.Enabled = post.CanDeleteBy(primaryUserId);
                 if (post.RetweetedByUserId == primaryUserId)
                     this.DeleteStripMenuItem.Text = Properties.Resources.DeleteMenuText2;
@@ -2268,7 +2178,7 @@ namespace OpenTween
                 return;
 
             // 選択されたツイートの中に削除可能なものが一つでもあるか
-            var primaryUserId = this.PrimaryAccount.UserId;
+            var primaryUserId = this.CurrentTabAccount.UserId;
             if (!posts.Any(x => x.CanDeleteBy(primaryUserId)))
                 return;
 
@@ -2282,6 +2192,7 @@ namespace OpenTween
             if (ret != DialogResult.OK)
                 return;
 
+            var currentTab = this.CurrentTab;
             var currentListView = this.CurrentListView;
             var focusedIndex = currentListView.FocusedItem?.Index ?? currentListView.TopItem?.Index ?? 0;
 
@@ -2295,17 +2206,17 @@ namespace OpenTween
 
                     try
                     {
-                        if (post.StatusId is TwitterDirectMessageId dmId)
+                        if (post.IsDm)
                         {
-                            await this.tw.Api.DirectMessagesEventsDestroy(dmId);
+                            await this.CurrentTabAccount.Client.DeletePost(post.StatusId);
                         }
                         else
                         {
-                            if (post.RetweetedByUserId == primaryUserId)
+                            if (post.RetweetedId != null && post.RetweetedByUserId == primaryUserId)
                             {
                                 // 自分が RT したツイート (自分が RT した自分のツイートも含む)
                                 //   => RT を取り消し
-                                await this.tw.DeleteRetweet(post);
+                                await this.CurrentTabAccount.Client.UnretweetPost(post.RetweetedId);
                             }
                             else
                             {
@@ -2315,13 +2226,13 @@ namespace OpenTween
                                     {
                                         // 他人に RT された自分のツイート
                                         //   => RT 元の自分のツイートを削除
-                                        await this.tw.DeleteTweet(post.RetweetedId.ToTwitterStatusId());
+                                        await this.CurrentTabAccount.Client.DeletePost(post.RetweetedId);
                                     }
                                     else
                                     {
                                         // 自分のツイート
                                         //   => ツイートを削除
-                                        await this.tw.DeleteTweet(post.StatusId.ToTwitterStatusId());
+                                        await this.CurrentTabAccount.Client.DeletePost(post.StatusId);
                                     }
                                 }
                             }
@@ -2341,25 +2252,28 @@ namespace OpenTween
                 else
                     this.StatusLabel.Text = Properties.Resources.DeleteStripMenuItem_ClickText3; // 失敗
 
-                using (ControlTransaction.Update(currentListView))
+                // 非同期タスク実行前後で表示中のタブが変わっていなければ発言一覧を更新する
+                if (currentTab == this.CurrentTab)
                 {
-                    this.listCache?.PurgeCache();
-                    this.listCache?.UpdateListSize();
-
-                    currentListView.SelectedIndices.Clear();
-
-                    var currentTab = this.CurrentTab;
-                    if (currentTab.AllCount != 0)
+                    using (ControlTransaction.Update(currentListView))
                     {
-                        int selectedIndex;
-                        if (currentTab.AllCount - 1 > focusedIndex && focusedIndex > -1)
-                            selectedIndex = focusedIndex;
-                        else
-                            selectedIndex = currentTab.AllCount - 1;
+                        this.listCache?.PurgeCache();
+                        this.listCache?.UpdateListSize();
 
-                        currentListView.SelectedIndices.Add(selectedIndex);
-                        currentListView.EnsureVisible(selectedIndex);
-                        currentListView.FocusedItem = currentListView.Items[selectedIndex];
+                        currentListView.SelectedIndices.Clear();
+
+                        if (currentTab.AllCount != 0)
+                        {
+                            int selectedIndex;
+                            if (currentTab.AllCount - 1 > focusedIndex && focusedIndex > -1)
+                                selectedIndex = focusedIndex;
+                            else
+                                selectedIndex = currentTab.AllCount - 1;
+
+                            currentListView.SelectedIndices.Add(selectedIndex);
+                            currentListView.EnsureVisible(selectedIndex);
+                            currentListView.FocusedItem = currentListView.Items[selectedIndex];
+                        }
                     }
                 }
 
@@ -2476,7 +2390,8 @@ namespace OpenTween
         private async void SettingStripMenuItem_Click(object sender, EventArgs e)
         {
             // 設定画面表示前のユーザー情報
-            var previousUserId = this.settings.Common.UserId;
+            var previousAccountKey = this.settings.Common.SelectedAccountKey is { } guid ? new AccountKey(guid) : (AccountKey?)null;
+            var previousSecondaryAccounts = this.accounts.SecondaryAccounts;
             var oldIconCol = this.Use2ColumnsMode;
 
             if (this.ShowSettingDialog() == DialogResult.OK)
@@ -2486,7 +2401,7 @@ namespace OpenTween
                     this.settings.ApplySettings();
 
                     this.accounts.LoadFromSettings(this.settings.Common);
-                    this.ImageSelector.Model.InitializeServices(this.tw, this.tw.Configuration);
+                    this.ImageSelector.Model.InitializeServices(this.CurrentTabAccount);
 
                     try
                     {
@@ -2663,13 +2578,52 @@ namespace OpenTween
                 }
             }
 
-            Twitter.AccountState = MyCommon.ACCOUNT_STATE.Valid;
+            this.PrimaryAccount.AccountState.HasUnrecoverableError = false;
 
             this.TopMost = this.settings.Common.AlwaysTop;
             this.SaveConfigsAll(false);
 
-            if (this.PrimaryAccount.UserId != previousUserId)
-                await this.DoGetFollowersMenu();
+            if (this.PrimaryAccount.UniqueKey != previousAccountKey)
+            {
+                this.SubscribePrimaryAccountRatelimit();
+                await this.RefreshConfigurationAsync();
+            }
+
+            var currentSecondaryAccounts = this.accounts.SecondaryAccounts;
+            var newSecondaryAccounts = currentSecondaryAccounts
+                .Where(x => !previousSecondaryAccounts.Any(y => y.UniqueKey == x.UniqueKey));
+            this.AddSecondaryAccountTabs(newSecondaryAccounts);
+            this.RemoveMissingAccountTabs();
+        }
+
+        private void AddSecondaryAccountTabs(IEnumerable<ISocialAccount> accounts)
+        {
+            foreach (var account in accounts)
+            {
+                var isPrimary = account.UniqueKey == this.accounts.Primary.UniqueKey;
+                var tabExists = this.statuses.GetTabsByType<HomeSpecifiedAccountTabModel>()
+                    .Any(x => x.SourceAccountKey == account.UniqueKey);
+                if (tabExists)
+                    continue;
+
+                var tabName = this.statuses.MakeTabName($"@{account.UserName}");
+                var homeTab = new HomeSpecifiedAccountTabModel(tabName, account.UniqueKey);
+                this.statuses.AddTab(homeTab);
+                this.AddNewTab(homeTab, startup: false);
+            }
+        }
+
+        private void RemoveMissingAccountTabs()
+        {
+            var secondaryAccounts = this.accounts.SecondaryAccounts;
+            var secondaryAccountTabs = this.statuses.GetTabsByType<HomeSpecifiedAccountTabModel>();
+
+            foreach (var tab in secondaryAccountTabs)
+            {
+                var isAccountExists = secondaryAccounts.Any(x => x.UniqueKey == tab.SourceAccountKey);
+                if (!isAccountExists)
+                    this.RemoveSpecifiedTab(tab.TabName, confirm: false);
+            }
         }
 
         /// <summary>
@@ -2754,13 +2708,11 @@ namespace OpenTween
             // 追加したタブをアクティブに
             this.ListTab.SelectedIndex = this.statuses.Tabs.Count - 1;
             // 検索条件の設定
-            var tabPage = this.CurrentTabPage;
-            var cmb = (ComboBox)tabPage.Controls["panelSearch"].Controls["comboSearch"];
-            cmb.Items.Add(searchWord);
-            cmb.Text = searchWord;
+            var panel = this.CurrentTabPage.Controls.OfType<PublicSearchHeaderPanel>().First();
+            panel.Query = searchWord;
             this.SaveConfigsTabs();
             // 検索実行
-            this.SearchButton_Click(tabPage.Controls["panelSearch"].Controls["comboSearch"], EventArgs.Empty);
+            this.PublicSearchTabPanel_Search(panel, EventArgs.Empty);
         }
 
         private async Task ShowUserTimeline()
@@ -2777,14 +2729,10 @@ namespace OpenTween
             await this.AddNewTabForUserTimeline(retweetedBy);
         }
 
-        private void SearchComboBox_KeyDown(object sender, KeyEventArgs e)
+        private void PublicSearchTabPanel_EscKeyDown(object sender, EventArgs e)
         {
-            if (e.KeyCode == Keys.Escape)
-            {
-                this.RemoveSpecifiedTab(this.CurrentTabName, false);
-                this.SaveConfigsTabs();
-                e.SuppressKeyPress = true;
-            }
+            this.RemoveSpecifiedTab(this.CurrentTabName, false);
+            this.SaveConfigsTabs();
         }
 
         public async Task AddNewTabForUserTimeline(string user)
@@ -2842,124 +2790,52 @@ namespace OpenTween
             {
                 tabPage.Controls.Add(listCustom);
 
-                // UserTimeline関連
-                var userTab = tab as UserTimelineTabModel;
-                var listTab = tab as ListTimelineTabModel;
-                var searchTab = tab as PublicSearchTabModel;
+                Control? headerPanel = null;
 
-                if (userTab != null || listTab != null)
+                if (tab is UserTimelineTabModel userTab)
                 {
-                    var label = new Label
+                    headerPanel = new GeneralTimelineHeaderPanel
                     {
                         Dock = DockStyle.Top,
-                        Name = "labelUser",
-                        TabIndex = 0,
+                        HeaderText = $"{userTab.ScreenName}'s Timeline",
                     };
-
-                    if (listTab != null)
+                }
+                else if (tab is ListTimelineTabModel listTab)
+                {
+                    headerPanel = new GeneralTimelineHeaderPanel
                     {
-                        label.Text = listTab.ListInfo.ToString();
-                    }
-                    else if (userTab != null)
+                        Dock = DockStyle.Top,
+                        HeaderText = listTab.ListInfo.ToString(),
+                    };
+                }
+                else if (tab is HomeSpecifiedAccountTabModel homeSecondaryTab)
+                {
+                    var account = this.accounts.GetAccountForTab(homeSecondaryTab);
+                    headerPanel = new GeneralTimelineHeaderPanel
                     {
-                        label.Text = userTab.ScreenName + "'s Timeline";
-                    }
-                    label.TextAlign = ContentAlignment.MiddleLeft;
-                    using (var tmpComboBox = new ComboBox())
-                    {
-                        label.Height = tmpComboBox.Height;
-                    }
-                    tabPage.Controls.Add(label);
+                        Dock = DockStyle.Top,
+                        HeaderText = $"@{account.UserName}: Home",
+                    };
                 }
                 // 検索関連の準備
-                else if (searchTab != null)
+                else if (tab is PublicSearchTabModel searchTab)
                 {
-                    var pnl = new Panel();
-
-                    var lbl = new Label();
-                    var cmb = new ComboBox();
-                    var btn = new Button();
-                    var cmbLang = new ComboBox();
-
-                    using (ControlTransaction.Layout(pnl, false))
+                    var panel = new PublicSearchHeaderPanel
                     {
-                        pnl.Controls.Add(cmb);
-                        pnl.Controls.Add(cmbLang);
-                        pnl.Controls.Add(btn);
-                        pnl.Controls.Add(lbl);
-                        pnl.Name = "panelSearch";
-                        pnl.TabIndex = 0;
-                        pnl.Dock = DockStyle.Top;
-                        pnl.Height = cmb.Height;
-                        pnl.Enter += this.SearchControls_Enter;
-                        pnl.Leave += this.SearchControls_Leave;
+                        Dock = DockStyle.Top,
+                        Query = searchTab.SearchWords,
+                        Lang = searchTab.SearchLang,
+                    };
 
-                        cmb.Text = "";
-                        cmb.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-                        cmb.Dock = DockStyle.Fill;
-                        cmb.Name = "comboSearch";
-                        cmb.DropDownStyle = ComboBoxStyle.DropDown;
-                        cmb.ImeMode = ImeMode.NoControl;
-                        cmb.TabStop = false;
-                        cmb.TabIndex = 1;
-                        cmb.AutoCompleteMode = AutoCompleteMode.None;
-                        cmb.KeyDown += this.SearchComboBox_KeyDown;
+                    panel.EscKeyDown += this.PublicSearchTabPanel_EscKeyDown;
+                    panel.Search += this.PublicSearchTabPanel_Search;
 
-                        cmbLang.Text = "";
-                        cmbLang.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-                        cmbLang.Dock = DockStyle.Right;
-                        cmbLang.Width = 50;
-                        cmbLang.Name = "comboLang";
-                        cmbLang.DropDownStyle = ComboBoxStyle.DropDownList;
-                        cmbLang.TabStop = false;
-                        cmbLang.TabIndex = 2;
-                        cmbLang.Items.Add("");
-                        cmbLang.Items.Add("ja");
-                        cmbLang.Items.Add("en");
-                        cmbLang.Items.Add("ar");
-                        cmbLang.Items.Add("da");
-                        cmbLang.Items.Add("nl");
-                        cmbLang.Items.Add("fa");
-                        cmbLang.Items.Add("fi");
-                        cmbLang.Items.Add("fr");
-                        cmbLang.Items.Add("de");
-                        cmbLang.Items.Add("hu");
-                        cmbLang.Items.Add("is");
-                        cmbLang.Items.Add("it");
-                        cmbLang.Items.Add("no");
-                        cmbLang.Items.Add("pl");
-                        cmbLang.Items.Add("pt");
-                        cmbLang.Items.Add("ru");
-                        cmbLang.Items.Add("es");
-                        cmbLang.Items.Add("sv");
-                        cmbLang.Items.Add("th");
+                    headerPanel = panel;
+                }
 
-                        lbl.Text = "Search(C-S-f)";
-                        lbl.Name = "label1";
-                        lbl.Dock = DockStyle.Left;
-                        lbl.Width = 90;
-                        lbl.Height = cmb.Height;
-                        lbl.TextAlign = ContentAlignment.MiddleLeft;
-                        lbl.TabIndex = 0;
-
-                        btn.Text = "Search";
-                        btn.Name = "buttonSearch";
-                        btn.UseVisualStyleBackColor = true;
-                        btn.Dock = DockStyle.Right;
-                        btn.TabStop = false;
-                        btn.TabIndex = 3;
-                        btn.Click += this.SearchButton_Click;
-
-                        if (!MyCommon.IsNullOrEmpty(searchTab.SearchWords))
-                        {
-                            cmb.Items.Add(searchTab.SearchWords);
-                            cmb.Text = searchTab.SearchWords;
-                        }
-
-                        cmbLang.Text = searchTab.SearchLang;
-
-                        tabPage.Controls.Add(pnl);
-                    }
+                if (headerPanel != null)
+                {
+                    tabPage.Controls.Add(headerPanel);
                 }
 
                 tabPage.Tag = listCustom;
@@ -3065,32 +2941,19 @@ namespace OpenTween
                 this.ListTab.Controls.Remove(tabPage);
 
                 // 後付けのコントロールを破棄
-                if (tabInfo.TabType == MyCommon.TabUsageType.UserTimeline || tabInfo.TabType == MyCommon.TabUsageType.Lists)
+                if (tabInfo.TabType == MyCommon.TabUsageType.UserTimeline ||
+                    tabInfo.TabType == MyCommon.TabUsageType.Lists ||
+                    tabInfo is HomeSpecifiedAccountTabModel)
                 {
-                    using var label = tabPage.Controls["labelUser"];
-                    tabPage.Controls.Remove(label);
+                    using var panel = tabPage.Controls.OfType<GeneralTimelineHeaderPanel>().First();
+                    tabPage.Controls.Remove(panel);
                 }
                 else if (tabInfo.TabType == MyCommon.TabUsageType.PublicSearch)
                 {
-                    using var pnl = tabPage.Controls["panelSearch"];
-
-                    pnl.Enter -= this.SearchControls_Enter;
-                    pnl.Leave -= this.SearchControls_Leave;
-                    tabPage.Controls.Remove(pnl);
-
-                    foreach (Control ctrl in pnl.Controls)
-                    {
-                        if (ctrl.Name == "buttonSearch")
-                        {
-                            ctrl.Click -= this.SearchButton_Click;
-                        }
-                        else if (ctrl.Name == "comboSearch")
-                        {
-                            ctrl.KeyDown -= this.SearchComboBox_KeyDown;
-                        }
-                        pnl.Controls.Remove(ctrl);
-                        ctrl.Dispose();
-                    }
+                    using var panel = tabPage.Controls.OfType<PublicSearchHeaderPanel>().First();
+                    panel.EscKeyDown -= this.PublicSearchTabPanel_EscKeyDown;
+                    panel.Search -= this.PublicSearchTabPanel_Search;
+                    tabPage.Controls.Remove(panel);
                 }
 
                 tabPage.Controls.Remove(listCustom);
@@ -3180,12 +3043,13 @@ namespace OpenTween
         {
             this.SetMainWindowTitle();
             this.SetStatusLabelUrl();
-            this.SetApiStatusLabel();
+            this.SetApiStatusLabel(this.CurrentTabAccount.AccountState.RateLimits);
             if (this.ListTab.Focused || ((Control)this.CurrentTabPage.Tag).Focused)
                 this.Tag = this.ListTab.Tag;
             this.TabMenuControl(this.CurrentTabName);
             this.PushSelectPostChain();
             this.DispSelectedPost();
+            this.ImageSelector.Model.InitializeServices(this.CurrentTabAccount);
         }
 
         private void SetListProperty()
@@ -3337,7 +3201,7 @@ namespace OpenTween
         private void StatusText_TextChanged(object sender, EventArgs e)
         {
             // 文字数カウント
-            var pLen = this.GetRestStatusCount(this.FormatStatusTextExtended(this.StatusText.Text));
+            var pLen = this.GetRestStatusCount();
             this.lblLen.Text = pLen.ToString();
             if (pLen < 0)
             {
@@ -3382,85 +3246,15 @@ namespace OpenTween
             return true;
         }
 
-        /// <summary>
-        /// 投稿時に auto_populate_reply_metadata オプションによって自動で追加されるメンションを除去します
-        /// </summary>
-        private string RemoveAutoPopuratedMentions(string statusText, out long[] autoPopulatedUserIds)
-        {
-            var autoPopulatedUserIdList = new List<long>();
-
-            var replyToPost = this.inReplyTo != null ? this.statuses[this.inReplyTo.Value.StatusId] : null;
-            if (replyToPost != null)
-            {
-                if (statusText.StartsWith($"@{replyToPost.ScreenName} ", StringComparison.Ordinal))
-                {
-                    statusText = statusText.Substring(replyToPost.ScreenName.Length + 2);
-                    autoPopulatedUserIdList.Add(replyToPost.UserId);
-
-                    foreach (var (userId, screenName) in replyToPost.ReplyToList)
-                    {
-                        if (statusText.StartsWith($"@{screenName} ", StringComparison.Ordinal))
-                        {
-                            statusText = statusText.Substring(screenName.Length + 2);
-                            autoPopulatedUserIdList.Add(userId);
-                        }
-                    }
-                }
-            }
-
-            autoPopulatedUserIds = autoPopulatedUserIdList.ToArray();
-
-            return statusText;
-        }
-
-        /// <summary>
-        /// attachment_url に指定可能な URL が含まれていれば除去
-        /// </summary>
-        private string RemoveAttachmentUrl(string statusText, out string? attachmentUrl)
-        {
-            attachmentUrl = null;
-
-            // attachment_url は media_id と同時に使用できない
-            if (this.ImageSelector.Visible && this.ImageSelector.Model.SelectedMediaService is TwitterPhoto)
-                return statusText;
-
-            var match = Twitter.AttachmentUrlRegex.Match(statusText);
-            if (!match.Success)
-                return statusText;
-
-            attachmentUrl = match.Value;
-
-            // マッチした URL を空白に置換
-            statusText = statusText.Substring(0, match.Index);
-
-            // テキストと URL の間にスペースが含まれていれば除去
-            return statusText.TrimEnd(' ');
-        }
-
-        private string FormatStatusTextExtended(string statusText)
-            => this.FormatStatusTextExtended(statusText, out _, out _);
-
-        /// <summary>
-        /// <see cref="FormatStatusText"/> に加えて、拡張モードで140字にカウントされない文字列の除去を行います
-        /// </summary>
-        private string FormatStatusTextExtended(string statusText, out long[] autoPopulatedUserIds, out string? attachmentUrl)
-        {
-            statusText = this.RemoveAutoPopuratedMentions(statusText, out autoPopulatedUserIds);
-
-            statusText = this.RemoveAttachmentUrl(statusText, out attachmentUrl);
-
-            return this.FormatStatusText(statusText);
-        }
-
-        internal string FormatStatusText(string statusText)
-            => this.FormatStatusText(statusText, Control.ModifierKeys);
+        internal PostStatusParams FormatStatusText(PostStatusParams statusParams)
+            => this.FormatStatusText(statusParams, Control.ModifierKeys);
 
         /// <summary>
         /// ツイート投稿前のフッター付与などの前処理を行います
         /// </summary>
-        internal string FormatStatusText(string statusText, Keys modifierKeys)
+        internal PostStatusParams FormatStatusText(PostStatusParams statusParams, Keys modifierKeys)
         {
-            statusText = statusText.Replace("\r\n", "\n");
+            var statusText = statusParams.Text.Replace("\r\n", "\n");
 
             if (this.SeparateUrlAndFullwidthCharacter)
             {
@@ -3476,7 +3270,7 @@ namespace OpenTween
 
             // DM の場合はこれ以降の処理を行わない
             if (statusText.StartsWith("D ", StringComparison.OrdinalIgnoreCase))
-                return statusText;
+                return statusParams with { Text = statusText };
 
             bool disableFooter;
             if (this.settings.Common.PostShiftEnter)
@@ -3494,23 +3288,11 @@ namespace OpenTween
             if (statusText.Contains("RT @"))
                 disableFooter = true;
 
-            // 自分宛のリプライの場合は先頭の「@screen_name 」の部分を除去する (in_reply_to_status_id は維持される)
-            var primaryUserName = this.PrimaryAccount.UserName;
-            if (this.inReplyTo != null && this.inReplyTo.Value.ScreenName == primaryUserName)
-            {
-                var mentionSelf = $"@{primaryUserName} ";
-                if (statusText.StartsWith(mentionSelf, StringComparison.OrdinalIgnoreCase))
-                {
-                    if (statusText.Length > mentionSelf.Length || this.GetSelectedImageService() != null)
-                        statusText = statusText.Substring(mentionSelf.Length);
-                }
-            }
-
             var header = "";
             var footer = "";
 
             var hashtag = this.HashMgr.UseHash;
-            if (!MyCommon.IsNullOrEmpty(hashtag) && !(this.HashMgr.IsNotAddToAtReply && this.inReplyTo != null))
+            if (!MyCommon.IsNullOrEmpty(hashtag) && !(this.HashMgr.IsNotAddToAtReply && statusParams.InReplyTo != null))
             {
                 if (this.HashMgr.IsHead)
                     header = this.HashMgr.UseHash + " ";
@@ -3547,15 +3329,33 @@ namespace OpenTween
                 }
             }
 
-            return statusText;
+            return statusParams with { Text = statusText };
+        }
+
+        private PostStatusParams CreatePostStatusParams(bool setFakeMediaIds = false)
+        {
+            var statusText = this.StatusText.Text;
+            var replyToPost = this.inReplyTo is (var inReplyToStatusId, _) ? this.statuses[inReplyToStatusId] : null;
+            var mediaIds = Array.Empty<long>();
+            if (setFakeMediaIds)
+            {
+                // 文字数計算のために仮の mediaId を設定する
+                var useNativeUpload = this.ImageSelector.Visible && this.ImageSelector.Model.SelectedMediaService is { IsNativeUploadService: true };
+                if (useNativeUpload)
+                    mediaIds = new[] { -1L };
+            }
+            var statusParams = new PostStatusParams(statusText, replyToPost, mediaIds);
+
+            return this.FormatStatusText(statusParams);
         }
 
         /// <summary>
         /// 投稿欄に表示する入力可能な文字数を計算します
         /// </summary>
-        private int GetRestStatusCount(string statusText)
+        private int GetRestStatusCount()
         {
-            var remainCount = this.tw.GetTextLengthRemain(statusText);
+            var statusParams = this.CreatePostStatusParams(setFakeMediaIds: true);
+            var remainCount = this.CurrentTabAccount.Client.GetTextLengthRemain(statusParams);
 
             var uploadService = this.GetSelectedImageService();
             if (uploadService != null)
@@ -3929,8 +3729,8 @@ namespace OpenTween
         {
             var tab = this.CurrentTab;
             var post = this.CurrentPost;
-            if (post != null && tab.TabType != MyCommon.TabUsageType.DirectMessage)
-                await MyCommon.OpenInBrowserAsync(this, MyCommon.GetStatusUrl(post));
+            if (post?.PostUri is { } postUri)
+                await MyCommon.OpenInBrowserAsync(this, postUri);
         }
 
         private async void VerUpMenuItem_Click(object sender, EventArgs e)
@@ -4162,10 +3962,9 @@ namespace OpenTween
             var tab = this.CurrentTab;
             if (tab.TabType == MyCommon.TabUsageType.PublicSearch)
             {
-                var pnl = this.CurrentTabPage.Controls["panelSearch"];
-                if (pnl.Controls["comboSearch"].Focused ||
-                    pnl.Controls["comboLang"].Focused ||
-                    pnl.Controls["buttonSearch"].Focused) return;
+                var panel = this.CurrentTabPage.Controls.OfType<PublicSearchHeaderPanel>().First();
+                if (panel.ContainsFocus)
+                    return;
             }
 
             if (e.Control || e.Shift || e.Alt)
@@ -4599,7 +4398,11 @@ namespace OpenTween
 
                 ShortcutCommand.Create(Keys.Control | Keys.Shift | Keys.F)
                     .OnlyWhen(() => this.CurrentTab.TabType == MyCommon.TabUsageType.PublicSearch)
-                    .Do(() => this.CurrentTabPage.Controls["panelSearch"].Controls["comboSearch"].Focus()),
+                    .Do(() =>
+                    {
+                        var panel = this.CurrentTabPage.Controls.OfType<PublicSearchHeaderPanel>().First();
+                        panel.FocusToQuery();
+                    }),
 
                 ShortcutCommand.Create(Keys.Control | Keys.Shift | Keys.L)
                     .Do(() => this.DoQuoteOfficial()),
@@ -4843,7 +4646,10 @@ namespace OpenTween
 
             var copyUrls = new List<string>();
             foreach (var post in tab.SelectedPosts)
-                copyUrls.Add(MyCommon.GetStatusUrl(post));
+            {
+                if (post.PostUri is { } postUri)
+                    copyUrls.Add(postUri.ToString());
+            }
 
             if (copyUrls.Count == 0)
                 return;
@@ -5217,7 +5023,7 @@ namespace OpenTween
             {
                 try
                 {
-                    var post = await this.tw.GetStatusApi(false, currentPost.StatusId.ToTwitterStatusId());
+                    var post = await this.CurrentTabAccount.Client.GetPostById(currentPost.StatusId, firstLoad: false);
 
                     currentPost = currentPost with
                     {
@@ -5265,9 +5071,8 @@ namespace OpenTween
                 {
                     await Task.Run(async () =>
                     {
-                        var post = await this.tw.GetStatusApi(false, currentPost.InReplyToStatusId.ToTwitterStatusId())
+                        var post = await this.CurrentTabAccount.Client.GetPostById(currentPost.InReplyToStatusId, firstLoad: false)
                             .ConfigureAwait(false);
-                        post.IsRead = true;
 
                         this.statuses.AddPost(post);
                         this.statuses.DistributePosts();
@@ -5696,7 +5501,7 @@ namespace OpenTween
                         break;
                     case UserTimelineTabModel userTab:
                         tabSetting.User = userTab.ScreenName;
-                        tabSetting.UserId = userTab.UserId;
+                        tabSetting.UserId = userTab.UserId?.Id;
                         break;
                     case PublicSearchTabModel searchTab:
                         tabSetting.SearchWords = searchTab.SearchWords;
@@ -6019,7 +5824,7 @@ namespace OpenTween
                 this.inReplyTo = null;
             }
 
-            var selfScreenName = this.PrimaryAccount.UserName;
+            var selfScreenName = this.CurrentTabAccount.UserName;
             var targetScreenNames = new List<string>();
             foreach (var post in selectedPosts)
             {
@@ -6366,7 +6171,8 @@ namespace OpenTween
                     if (tabUsage == MyCommon.TabUsageType.PublicSearch)
                     {
                         this.ListTab.SelectedIndex = tabIndex;
-                        this.CurrentTabPage.Controls["panelSearch"].Controls["comboSearch"].Focus();
+                        var panel = this.CurrentTabPage.Controls.OfType<PublicSearchHeaderPanel>().First();
+                        panel.FocusToQuery();
                     }
                     if (tabUsage == MyCommon.TabUsageType.Lists)
                     {
@@ -6477,20 +6283,6 @@ namespace OpenTween
                     {
                         this.PostButton_Click(this.PostButton, EventArgs.Empty);
                         return true;
-                    }
-                }
-                else
-                {
-                    var tab = this.CurrentTab;
-                    if (tab.TabType == MyCommon.TabUsageType.PublicSearch)
-                    {
-                        var tabPage = this.CurrentTabPage;
-                        if (tabPage.Controls["panelSearch"].Controls["comboSearch"].Focused ||
-                            tabPage.Controls["panelSearch"].Controls["comboLang"].Focused)
-                        {
-                            this.SearchButton_Click(tabPage.Controls["panelSearch"].Controls["comboSearch"], EventArgs.Empty);
-                            return true;
-                        }
                     }
                 }
             }
@@ -6853,7 +6645,7 @@ namespace OpenTween
                 }
             }
 
-            if (this.settings.Common.DispUsername) ttl.Append(this.PrimaryAccount.UserName).Append(" - ");
+            if (this.settings.Common.DispUsername) ttl.Append(this.CurrentTabAccount.UserName).Append(" - ");
             ttl.Append(ApplicationSettings.ApplicationName);
             ttl.Append("  ");
             switch (this.settings.Common.DispLatestPost)
@@ -6878,8 +6670,15 @@ namespace OpenTween
                     ttl.AppendFormat(Properties.Resources.SetMainWindowTitleText4, ur, al);
                     break;
                 case MyCommon.DispTitleEnum.OwnStatus:
-                    if (followers == 0 && this.tw.FollowersCount > 0) followers = this.tw.FollowersCount;
-                    ttl.AppendFormat(Properties.Resources.OwnStatusTitle, this.tw.StatusesCount, this.tw.FriendsCount, this.tw.FollowersCount, this.tw.FollowersCount - followers);
+                    var accountState = this.CurrentTabAccount.AccountState;
+                    if (followers == 0 && accountState.FollowersCount != null) followers = accountState.FollowersCount.Value;
+                    ttl.AppendFormat(
+                        Properties.Resources.OwnStatusTitle,
+                        accountState.StatusesCount?.ToString() ?? "-",
+                        accountState.FriendsCount?.ToString() ?? "-",
+                        accountState.FollowersCount?.ToString() ?? "-",
+                        accountState.FollowersCount != null ? accountState.FollowersCount.Value - followers : "-"
+                    );
                     break;
             }
 
@@ -6944,7 +6743,18 @@ namespace OpenTween
             return slbl.ToString();
         }
 
-        private async void TwitterApiStatus_AccessLimitUpdated(object sender, EventArgs e)
+        private void SubscribePrimaryAccountRatelimit()
+        {
+            this.unsubscribeRateLimitUpdate?.Dispose();
+
+            var rateLimits = this.CurrentTabAccount.AccountState.RateLimits;
+            this.unsubscribeRateLimitUpdate = rateLimits.SubscribeAccessLimitUpdated(this.TwitterApiStatus_AccessLimitUpdated);
+
+            // アカウントの切替を反映するため初回だけ空の更新通知を送る
+            this.TwitterApiStatus_AccessLimitUpdated(rateLimits, new(null));
+        }
+
+        private async void TwitterApiStatus_AccessLimitUpdated(RateLimitCollection sender, RateLimitCollection.AccessLimitUpdatedEventArgs e)
         {
             try
             {
@@ -6954,8 +6764,7 @@ namespace OpenTween
                 }
                 else
                 {
-                    var endpointName = ((TwitterApiStatus.AccessLimitUpdatedEventArgs)e).EndpointName;
-                    this.SetApiStatusLabel(endpointName);
+                    this.SetApiStatusLabel(sender, e.EndpointName);
                 }
             }
             catch (ObjectDisposedException)
@@ -6968,13 +6777,13 @@ namespace OpenTween
             }
         }
 
-        private void SetApiStatusLabel(string? endpointName = null)
+        private void SetApiStatusLabel(RateLimitCollection rateLimits, string? endpointName = null)
         {
             var tabType = this.CurrentTab.TabType;
 
             if (endpointName == null)
             {
-                var authByCookie = this.tw.Api.AuthType == APIAuthType.TwitterComCookie;
+                var authByCookie = this.CurrentTabAccount is TwitterAccount twAccount && twAccount.AuthType == APIAuthType.TwitterComCookie;
 
                 // 表示中のタブに応じて更新
                 endpointName = tabType switch
@@ -6998,13 +6807,10 @@ namespace OpenTween
                         authByCookie ? TweetDetailRequest.EndpointName : "/statuses/show/:id",
                     _ => null,
                 };
-                this.toolStripApiGauge.ApiEndpoint = endpointName;
             }
-            else
-            {
-                var currentEndpointName = this.toolStripApiGauge.ApiEndpoint;
-                this.toolStripApiGauge.ApiEndpoint = currentEndpointName;
-            }
+
+            this.toolStripApiGauge.ApiLimit = endpointName != null ? rateLimits[endpointName] : null;
+            this.toolStripApiGauge.ApiEndpoint = endpointName;
         }
 
         private void SetStatusLabelUrl()
@@ -7022,7 +6828,7 @@ namespace OpenTween
             ur.Remove(0, ur.Length);
             if (this.settings.Common.DispUsername)
             {
-                ur.Append(this.PrimaryAccount.UserName);
+                ur.Append(this.CurrentTabAccount.UserName);
                 ur.Append(" - ");
             }
             ur.Append(ApplicationSettings.ApplicationName);
@@ -7208,7 +7014,8 @@ namespace OpenTween
             {
                 if (MyCommon.IsKeyDown(Keys.Shift))
                 {
-                    await MyCommon.OpenInBrowserAsync(this, MyCommon.GetStatusUrl(currentPost.InReplyToUser, currentPost.InReplyToStatusId.ToTwitterStatusId()));
+                    if (currentPost.PostUri is { } postUri)
+                        await MyCommon.OpenInBrowserAsync(this, postUri);
                     return;
                 }
                 if (this.statuses.Posts.TryGetValue(currentPost.InReplyToStatusId, out var repPost))
@@ -7792,7 +7599,7 @@ namespace OpenTween
             }
         }
 
-        private void ListTabSelect(TabPage tabPage)
+        private void ListTabSelect(string tabName)
         {
             this.SetListProperty();
 
@@ -7802,7 +7609,7 @@ namespace OpenTween
 
             this.listCache?.PurgeCache();
 
-            this.statuses.SelectTab(tabPage.Text);
+            this.statuses.SelectTab(tabName);
 
             this.InitializeTimelineListView();
 
@@ -7845,7 +7652,7 @@ namespace OpenTween
         }
 
         private void ListTab_Selecting(object sender, TabControlCancelEventArgs e)
-            => this.ListTabSelect(e.TabPage);
+            => this.ListTabSelect(e.TabPage.Text);
 
         private void SelectListItem(DetailsListView lView, int index)
         {
@@ -7886,13 +7693,10 @@ namespace OpenTween
             {
                 var loadTasks = new TaskCollection();
 
-                loadTasks.Add(new[]
+                loadTasks.Add(new Func<Task>[]
                 {
-                    this.RefreshMuteUserIdsAsync,
-                    this.RefreshBlockIdsAsync,
-                    this.RefreshNoRetweetIdsAsync,
-                    this.RefreshTwitterConfigurationAsync,
                     this.RefreshTabAsync<HomeTabModel>,
+                    this.RefreshTabAsync<HomeSpecifiedAccountTabModel>,
                     this.RefreshTabAsync<MentionsTabModel>,
                     this.RefreshTabAsync<DirectMessagesTabModel>,
                     this.RefreshTabAsync<PublicSearchTabModel>,
@@ -7901,7 +7705,7 @@ namespace OpenTween
                 });
 
                 if (this.settings.Common.StartupFollowers)
-                    loadTasks.Add(this.RefreshFollowerIdsAsync);
+                    loadTasks.Add(this.RefreshConfigurationAsync);
 
                 if (this.settings.Common.GetFav)
                     loadTasks.Add(this.RefreshTabAsync<FavoritesTabModel>);
@@ -7937,27 +7741,6 @@ namespace OpenTween
                     this.VerUpMenuItem.Available = false;
                     this.ToolStripSeparator16.Available = false; // VerUpMenuItem の一つ上にあるセパレータ
                 }
-
-                // 権限チェック read/write権限(xAuthで取得したトークン)の場合は再認証を促す
-                if (MyCommon.TwitterApiInfo.AccessLevel == TwitterApiAccessLevel.ReadWrite)
-                {
-                    MessageBox.Show(Properties.Resources.ReAuthorizeText);
-                    this.SettingStripMenuItem_Click(this.SettingStripMenuItem, EventArgs.Empty);
-                }
-
-                // 取得失敗の場合は再試行する
-                var reloadTasks = new TaskCollection();
-
-                if (!this.tw.GetFollowersSuccess && this.settings.Common.StartupFollowers)
-                    reloadTasks.Add(() => this.RefreshFollowerIdsAsync());
-
-                if (!this.tw.GetNoRetweetSuccess)
-                    reloadTasks.Add(() => this.RefreshNoRetweetIdsAsync());
-
-                if (this.tw.Configuration.PhotoSizeLimit == 0)
-                    reloadTasks.Add(() => this.RefreshTwitterConfigurationAsync());
-
-                await reloadTasks.RunAll();
             }
 
             this.initial = false;
@@ -7973,14 +7756,8 @@ namespace OpenTween
             this.thumbGenerator.ImgAzyobuziNet.AutoUpdate = true;
         }
 
-        private async Task DoGetFollowersMenu()
-        {
-            await this.RefreshFollowerIdsAsync();
-            this.DispSelectedPost(true);
-        }
-
         private async void GetFollowersAllToolStripMenuItem_Click(object sender, EventArgs e)
-            => await this.DoGetFollowersMenu();
+            => await this.RefreshConfigurationAsync();
 
         private void ReTweetUnofficialStripMenuItem_Click(object sender, EventArgs e)
             => this.DoReTweetUnofficial();
@@ -7991,7 +7768,7 @@ namespace OpenTween
             if (this.ExistCurrentPost)
             {
                 var selectedPosts = this.CurrentTab.SelectedPosts;
-                var primaryUserId = this.PrimaryAccount.UserId;
+                var primaryUserId = this.CurrentTabAccount.UserId;
 
                 if (selectedPosts.Any(x => !x.CanRetweetBy(primaryUserId)))
                 {
@@ -8034,9 +7811,7 @@ namespace OpenTween
                     }
                 }
 
-                var statusIds = selectedPosts.Select(x => x.StatusId).ToList();
-
-                await this.RetweetAsync(statusIds);
+                await this.RetweetAsync(selectedPosts);
             }
         }
 
@@ -8192,7 +7967,13 @@ namespace OpenTween
 
         private async void ApiUsageInfoMenuItem_Click(object sender, EventArgs e)
         {
-            TwitterApiStatus? apiStatus;
+            if (this.CurrentTabAccount is not TwitterAccount twAccount)
+            {
+                this.ShowAccountTypeError();
+                return;
+            }
+
+            RateLimitCollection? rateLimits;
 
             using (var dialog = new WaitingDialog(Properties.Resources.ApiInfo6))
             {
@@ -8200,18 +7981,18 @@ namespace OpenTween
 
                 try
                 {
-                    var task = this.tw.GetInfoApi();
-                    apiStatus = await dialog.WaitForAsync(this, task);
+                    var task = twAccount.Legacy.GetInfoApi();
+                    rateLimits = await dialog.WaitForAsync(this, task);
                 }
                 catch (WebApiException)
                 {
-                    apiStatus = null;
+                    rateLimits = null;
                 }
 
                 if (cancellationToken.IsCancellationRequested)
                     return;
 
-                if (apiStatus == null)
+                if (rateLimits == null)
                 {
                     MessageBox.Show(Properties.Resources.ApiInfo5, Properties.Resources.ApiInfo4, MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
@@ -8219,6 +8000,7 @@ namespace OpenTween
             }
 
             using var apiDlg = new ApiInfoDialog();
+            apiDlg.RateLimits = twAccount.AccountState.RateLimits;
             apiDlg.ShowDialog(this);
         }
 
@@ -8231,6 +8013,12 @@ namespace OpenTween
 
         internal async Task FollowCommand(string id)
         {
+            if (this.CurrentTabAccount is not TwitterAccount twAccount)
+            {
+                this.ShowAccountTypeError();
+                return;
+            }
+
             using (var inputName = new InputTabName())
             {
                 inputName.FormTitle = "Follow";
@@ -8249,7 +8037,7 @@ namespace OpenTween
             {
                 try
                 {
-                    var task = this.tw.Api.FriendshipsCreate(id).IgnoreResponse();
+                    var task = twAccount.Legacy.Api.FriendshipsCreate(id).IgnoreResponse();
                     await dialog.WaitForAsync(this, task);
                 }
                 catch (WebApiException ex)
@@ -8271,6 +8059,12 @@ namespace OpenTween
 
         internal async Task RemoveCommand(string id, bool skipInput)
         {
+            if (this.CurrentTabAccount is not TwitterAccount twAccount)
+            {
+                this.ShowAccountTypeError();
+                return;
+            }
+
             if (!skipInput)
             {
                 using var inputName = new InputTabName();
@@ -8290,7 +8084,7 @@ namespace OpenTween
             {
                 try
                 {
-                    var task = this.tw.Api.FriendshipsDestroy(id).IgnoreResponse();
+                    var task = twAccount.Legacy.Api.FriendshipsDestroy(id).IgnoreResponse();
                     await dialog.WaitForAsync(this, task);
                 }
                 catch (WebApiException ex)
@@ -8312,6 +8106,12 @@ namespace OpenTween
 
         internal async Task ShowFriendship(string id)
         {
+            if (this.CurrentTabAccount is not TwitterAccount twAccount)
+            {
+                this.ShowAccountTypeError();
+                return;
+            }
+
             using (var inputName = new InputTabName())
             {
                 inputName.FormTitle = "Show Friendships";
@@ -8334,7 +8134,7 @@ namespace OpenTween
 
                 try
                 {
-                    var task = this.tw.Api.FriendshipsShow(this.PrimaryAccount.UserName, id);
+                    var task = twAccount.Legacy.Api.FriendshipsShow(twAccount.UserName, id);
                     var friendship = await dialog.WaitForAsync(this, task);
 
                     isFollowing = friendship.Relationship.Source.Following;
@@ -8374,6 +8174,12 @@ namespace OpenTween
 
         internal async Task ShowFriendship(string[] ids)
         {
+            if (this.CurrentTabAccount is not TwitterAccount twAccount)
+            {
+                this.ShowAccountTypeError();
+                return;
+            }
+
             foreach (var id in ids)
             {
                 bool isFollowing, isFollowed;
@@ -8384,7 +8190,7 @@ namespace OpenTween
 
                     try
                     {
-                        var task = this.tw.Api.FriendshipsShow(this.PrimaryAccount.UserName, id);
+                        var task = twAccount.Legacy.Api.FriendshipsShow(twAccount.UserName, id);
                         var friendship = await dialog.WaitForAsync(this, task);
 
                         isFollowing = friendship.Relationship.Source.Following;
@@ -8444,18 +8250,13 @@ namespace OpenTween
         }
 
         private async void OwnStatusMenuItem_Click(object sender, EventArgs e)
-            => await this.DoShowUserStatus(this.PrimaryAccount.UserName, false);
+            => await this.DoShowUserStatus(this.CurrentTabAccount.UserName, false);
 
         // TwitterIDでない固定文字列を調べる（文字列検証のみ　実際に取得はしない）
         // URLから切り出した文字列を渡す
 
         public bool IsTwitterId(string name)
-        {
-            if (this.tw.Configuration.NonUsernamePaths == null || this.tw.Configuration.NonUsernamePaths.Length == 0)
-                return !Regex.Match(name, @"^(about|jobs|tos|privacy|who_to_follow|download|messages)$", RegexOptions.IgnoreCase).Success;
-            else
-                return !this.tw.Configuration.NonUsernamePaths.Contains(name, StringComparer.InvariantCultureIgnoreCase);
-        }
+            => !Regex.Match(name, @"^(about|jobs|tos|privacy|who_to_follow|download|messages)$", RegexOptions.IgnoreCase).Success;
 
         private void DoQuoteOfficial()
         {
@@ -8471,11 +8272,14 @@ namespace OpenTween
                     return;
                 }
 
+                if (post.PostUri is not { } postUri)
+                    return;
+
                 var selection = (this.StatusText.SelectionStart, this.StatusText.SelectionLength);
 
                 this.inReplyTo = null;
 
-                this.StatusText.Text += " " + MyCommon.GetStatusUrl(post);
+                this.StatusText.Text += " " + postUri;
 
                 (this.StatusText.SelectionStart, this.StatusText.SelectionLength) = selection;
                 this.StatusText.Focus();
@@ -8516,25 +8320,23 @@ namespace OpenTween
         private void QuoteStripMenuItem_Click(object sender, EventArgs e)
             => this.DoQuoteOfficial();
 
-        private async void SearchButton_Click(object sender, EventArgs e)
+        private async void PublicSearchTabPanel_Search(object sender, EventArgs e)
         {
             // 公式検索
-            var pnl = ((Control)sender).Parent;
-            if (pnl == null) return;
-            var tbName = pnl.Parent.Text;
-            var tb = (PublicSearchTabModel)this.statuses.Tabs[tbName];
-            var cmb = (ComboBox)pnl.Controls["comboSearch"];
-            var cmbLang = (ComboBox)pnl.Controls["comboLang"];
-            cmb.Text = cmb.Text.Trim();
+            var tb = (PublicSearchTabModel)this.CurrentTab;
+            var panel = this.CurrentTabPage.Controls.OfType<PublicSearchHeaderPanel>().First();
+            var query = panel.Query;
+            var lang = panel.Lang;
+
             // 検索式演算子 OR についてのみ大文字しか認識しないので強制的に大文字とする
             var quote = false;
             var buf = new StringBuilder();
-            var c = cmb.Text.ToCharArray();
-            for (var cnt = 0; cnt < cmb.Text.Length; cnt++)
+            var c = query.ToCharArray();
+            for (var cnt = 0; cnt < c.Length; cnt++)
             {
-                if (cnt > cmb.Text.Length - 4)
+                if (cnt > c.Length - 4)
                 {
-                    buf.Append(cmb.Text.Substring(cnt));
+                    buf.Append(query.Substring(cnt));
                     break;
                 }
                 if (c[cnt] == '"')
@@ -8543,7 +8345,7 @@ namespace OpenTween
                 }
                 else
                 {
-                    if (!quote && cmb.Text.Substring(cnt, 4).Equals(" or ", StringComparison.OrdinalIgnoreCase))
+                    if (!quote && query.Substring(cnt, 4).Equals(" or ", StringComparison.OrdinalIgnoreCase))
                     {
                         buf.Append(" OR ");
                         cnt += 3;
@@ -8552,15 +8354,14 @@ namespace OpenTween
                 }
                 buf.Append(c[cnt]);
             }
-            cmb.Text = buf.ToString();
+            query = buf.ToString();
 
-            var listView = (DetailsListView)pnl.Parent.Tag;
+            var listView = this.CurrentListView;
+            var queryChanged = tb.SearchWords != query || tb.SearchLang != lang;
 
-            var queryChanged = tb.SearchWords != cmb.Text || tb.SearchLang != cmbLang.Text;
-
-            tb.SearchWords = cmb.Text;
-            tb.SearchLang = cmbLang.Text;
-            if (MyCommon.IsNullOrEmpty(cmb.Text))
+            tb.SearchWords = query;
+            tb.SearchLang = lang;
+            if (MyCommon.IsNullOrEmpty(query))
             {
                 listView.Focus();
                 this.SaveConfigsTabs();
@@ -8568,12 +8369,7 @@ namespace OpenTween
             }
             if (queryChanged)
             {
-                var idx = cmb.Items.IndexOf(tb.SearchWords);
-                if (idx > -1) cmb.Items.RemoveAt(idx);
-                cmb.Items.Insert(0, tb.SearchWords);
-                cmb.Text = tb.SearchWords;
-                cmb.SelectAll();
-                this.statuses.ClearTabIds(tbName);
+                this.statuses.ClearTabIds(tb.TabName);
                 this.listCache?.PurgeCache();
                 this.listCache?.UpdateListSize();
                 this.SaveConfigsTabs();   // 検索条件の保存
@@ -8639,33 +8435,23 @@ namespace OpenTween
 
         public void ListManageUserContext(string screenName)
         {
-            using var listSelectForm = new MyLists(screenName, this.tw.Api);
+            if (this.CurrentTabAccount is not TwitterAccount twAccount)
+            {
+                this.ShowAccountTypeError();
+                return;
+            }
+
+            using var listSelectForm = new MyLists(screenName, twAccount.Legacy);
             listSelectForm.ShowDialog(this);
-        }
-
-        private void SearchControls_Enter(object sender, EventArgs e)
-        {
-            var pnl = (Control)sender;
-            foreach (Control ctl in pnl.Controls)
-            {
-                ctl.TabStop = true;
-            }
-        }
-
-        private void SearchControls_Leave(object sender, EventArgs e)
-        {
-            var pnl = (Control)sender;
-            foreach (Control ctl in pnl.Controls)
-            {
-                ctl.TabStop = false;
-            }
         }
 
         private void PublicSearchQueryMenuItem_Click(object sender, EventArgs e)
         {
             var tab = this.CurrentTab;
             if (tab.TabType != MyCommon.TabUsageType.PublicSearch) return;
-            this.CurrentTabPage.Controls["panelSearch"].Controls["comboSearch"].Focus();
+
+            var panel = this.CurrentTabPage.Controls.OfType<PublicSearchHeaderPanel>().First();
+            panel.FocusToQuery();
         }
 
         private void StatusLabel_DoubleClick(object sender, EventArgs e)
@@ -8785,7 +8571,7 @@ namespace OpenTween
                 this.OpenStatusOpMenuItem.Enabled = true;
                 this.ShowRelatedStatusesMenuItem2.Enabled = true;  // PublicSearchの時問題出るかも
 
-                if (!post.CanRetweetBy(this.PrimaryAccount.UserId))
+                if (!post.CanRetweetBy(this.CurrentTabAccount.UserId))
                 {
                     this.RtOpMenuItem.Enabled = false;
                     this.RtUnOpMenuItem.Enabled = false;
@@ -8822,15 +8608,12 @@ namespace OpenTween
 
             if (this.ExistCurrentPost && post != null)
             {
-                this.DelOpMenuItem.Enabled = post.CanDeleteBy(this.PrimaryAccount.UserId);
+                this.DelOpMenuItem.Enabled = post.CanDeleteBy(this.CurrentTabAccount.UserId);
             }
         }
 
         private void MenuItemTab_DropDownOpening(object sender, EventArgs e)
             => this.ContextMenuTabProperty_Opening(sender, null!);
-
-        public Twitter TwitterInstance
-            => this.tw;
 
         private void SplitContainer3_SplitterMoved(object sender, SplitterEventArgs e)
         {
@@ -8892,6 +8675,12 @@ namespace OpenTween
 
         private async Task DoShowUserStatus(string id, bool showInputDialog)
         {
+            if (this.CurrentTabAccount is not TwitterAccount twAccount)
+            {
+                this.ShowAccountTypeError();
+                return;
+            }
+
             TwitterUser? user = null;
 
             if (showInputDialog)
@@ -8915,7 +8704,7 @@ namespace OpenTween
 
                 try
                 {
-                    var task = this.tw.GetUserInfo(id);
+                    var task = twAccount.Legacy.GetUserInfo(id);
                     user = await dialog.WaitForAsync(this, task);
                 }
                 catch (WebApiException ex)
@@ -8929,12 +8718,12 @@ namespace OpenTween
                     return;
             }
 
-            await this.DoShowUserStatus(user);
+            await this.DoShowUserStatus(twAccount, user);
         }
 
-        private async Task DoShowUserStatus(TwitterUser user)
+        private async Task DoShowUserStatus(TwitterAccount twAccount, TwitterUser user)
         {
-            using var userDialog = new UserInfoDialog(this, this.tw.Api, this.detailsHtmlBuilder);
+            using var userDialog = new UserInfoDialog(this, twAccount.Legacy, this.detailsHtmlBuilder);
             var showUserTask = userDialog.ShowUserAsync(user);
             userDialog.ShowDialog(this);
 
@@ -8971,6 +8760,12 @@ namespace OpenTween
 
         private async void RtCountMenuItem_Click(object sender, EventArgs e)
         {
+            if (this.CurrentTabAccount is not TwitterAccount twAccount)
+            {
+                this.ShowAccountTypeError();
+                return;
+            }
+
             var post = this.CurrentPost;
             if (!this.ExistCurrentPost || post == null)
                 return;
@@ -8984,7 +8779,7 @@ namespace OpenTween
 
                 try
                 {
-                    var task = this.tw.Api.StatusesShow(statusId.ToTwitterStatusId());
+                    var task = twAccount.Legacy.Api.StatusesShow(statusId.ToTwitterStatusId());
                     status = await dialog.WaitForAsync(this, task);
                 }
                 catch (WebApiException ex)
@@ -9117,9 +8912,18 @@ namespace OpenTween
 
         private void ListManageToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            using var form = new ListManage(this.tw);
+            if (this.CurrentTabAccount is not TwitterAccount twAccount)
+            {
+                this.ShowAccountTypeError();
+                return;
+            }
+
+            using var form = new ListManage(twAccount.Legacy);
             form.ShowDialog(this);
         }
+
+        private void ShowAccountTypeError()
+            => MessageBox.Show(this, Properties.Resources.AccountTypeErrorText, ApplicationSettings.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
         private bool ModifySettingCommon { get; set; }
 
@@ -9180,9 +8984,13 @@ namespace OpenTween
             var post = this.statuses[statusId];
             if (post == null)
             {
+                var account = this.GetAccountForPostId(statusId);
+                if (account == null)
+                    return;
+
                 try
                 {
-                    post = await this.tw.GetStatusApi(false, statusId.ToTwitterStatusId());
+                    post = await account.Client.GetPostById(statusId, firstLoad: false);
                 }
                 catch (WebApiException ex)
                 {
@@ -9192,6 +9000,12 @@ namespace OpenTween
             }
 
             await this.OpenRelatedTab(post);
+        }
+
+        public ISocialAccount? GetAccountForPostId(PostId postId)
+        {
+            var preferedAccountKey = this.CurrentTab.SourceAccountKey;
+            return this.accounts.GetAccountForPostId(postId, preferedAccountKey);
         }
 
         /// <summary>
@@ -9209,7 +9023,11 @@ namespace OpenTween
 
             var tabName = this.statuses.MakeTabName("Related Tweets");
 
-            tabRelated = new RelatedPostsTabModel(tabName, post)
+            var account = this.GetAccountForPostId(post.StatusId);
+            if (account == null)
+                return;
+
+            tabRelated = new RelatedPostsTabModel(tabName, account.UniqueKey, post)
             {
                 UnreadManage = false,
                 Notify = false,
@@ -9264,7 +9082,7 @@ namespace OpenTween
         }
 
         private async void OpenOwnHomeMenuItem_Click(object sender, EventArgs e)
-            => await MyCommon.OpenInBrowserAsync(this, MyCommon.TwitterUrl + this.PrimaryAccount.UserName);
+            => await MyCommon.OpenInBrowserAsync(this, MyCommon.TwitterUrl + this.CurrentTabAccount.UserName);
 
         private bool ExistCurrentPost
         {

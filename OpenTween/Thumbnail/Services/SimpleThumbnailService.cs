@@ -66,11 +66,8 @@ namespace OpenTween.Thumbnail.Services
                 var thumbnailUrl = this.ReplaceUrl(url);
                 if (thumbnailUrl == null) return null;
 
-                return new ThumbnailInfo
+                return new ThumbnailInfo(url, thumbnailUrl)
                 {
-                    MediaPageUrl = url,
-                    ThumbnailImageUrl = thumbnailUrl,
-                    TooltipText = null,
                     FullSizeImageUrl = this.ReplaceUrl(url, this.fullsizeReplacement),
                 };
             },

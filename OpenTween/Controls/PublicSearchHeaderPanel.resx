@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?><root xml:space="preserve">
+	<resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+	<resheader name="version"><value>2.0</value></resheader>
+	<resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+	<resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+	<assembly alias="mscorlib" name="mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+	<assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+	<assembly alias="System.Drawing" name="System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+
+	<data name="$this.AutoScaleDimensions" type="System.Drawing.SizeF, System.Drawing"><value>96, 96</value></data>
+	<metadata name="$this.Localizable" type="System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"><value>True</value></metadata>
+	<data name="$this.Size" type="System.Drawing.Size, System.Drawing"><value>400, 22</value></data>
+	<data name="&gt;&gt;$this.Name"><value>PublicSearchHeaderPanel</value></data>
+	<data name="&gt;&gt;$this.Type"><value>System.Windows.Forms.UserControl, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;buttonSearch.Name"><value>buttonSearch</value></data>
+	<data name="&gt;&gt;buttonSearch.Parent"><value>tableLayoutPanel1</value></data>
+	<data name="&gt;&gt;buttonSearch.Type"><value>System.Windows.Forms.Button, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;buttonSearch.ZOrder"><value>3</value></data>
+	<data name="&gt;&gt;comboBoxLang.Name"><value>comboBoxLang</value></data>
+	<data name="&gt;&gt;comboBoxLang.Parent"><value>tableLayoutPanel1</value></data>
+	<data name="&gt;&gt;comboBoxLang.Type"><value>System.Windows.Forms.ComboBox, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;comboBoxLang.ZOrder"><value>2</value></data>
+	<data name="&gt;&gt;comboBoxQuery.Name"><value>comboBoxQuery</value></data>
+	<data name="&gt;&gt;comboBoxQuery.Parent"><value>tableLayoutPanel1</value></data>
+	<data name="&gt;&gt;comboBoxQuery.Type"><value>System.Windows.Forms.ComboBox, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;comboBoxQuery.ZOrder"><value>1</value></data>
+	<data name="&gt;&gt;label1.Name"><value>label1</value></data>
+	<data name="&gt;&gt;label1.Parent"><value>tableLayoutPanel1</value></data>
+	<data name="&gt;&gt;label1.Type"><value>System.Windows.Forms.Label, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;label1.ZOrder"><value>0</value></data>
+	<data name="&gt;&gt;tableLayoutPanel1.Name"><value>tableLayoutPanel1</value></data>
+	<data name="&gt;&gt;tableLayoutPanel1.Parent"><value>$this</value></data>
+	<data name="&gt;&gt;tableLayoutPanel1.Type"><value>System.Windows.Forms.TableLayoutPanel, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;tableLayoutPanel1.ZOrder"><value>0</value></data>
+	<data name="buttonSearch.Anchor" type="System.Windows.Forms.AnchorStyles, System.Windows.Forms"><value>Left</value></data>
+	<data name="buttonSearch.AutoSize" type="System.Boolean, mscorlib"><value>True</value></data>
+	<data name="buttonSearch.Location" type="System.Drawing.Point, System.Drawing"><value>326, 0</value></data>
+	<data name="buttonSearch.Margin" type="System.Windows.Forms.Padding, System.Windows.Forms"><value>0, 0, 0, 0</value></data>
+	<data name="buttonSearch.Padding" type="System.Windows.Forms.Padding, System.Windows.Forms"><value>12, 0, 12, 0</value></data>
+	<data name="buttonSearch.Size" type="System.Drawing.Size, System.Drawing"><value>74, 22</value></data>
+	<data name="buttonSearch.TabIndex" type="System.Int32, mscorlib"><value>3</value></data>
+	<data name="buttonSearch.Text"><value>Search</value></data>
+	<data name="comboBoxLang.Anchor" type="System.Windows.Forms.AnchorStyles, System.Windows.Forms"><value>Left</value></data>
+	<data name="comboBoxLang.Items"><value /></data>
+	<data name="comboBoxLang.Items1"><value>ja</value></data>
+	<data name="comboBoxLang.Items10"><value>hu</value></data>
+	<data name="comboBoxLang.Items11"><value>is</value></data>
+	<data name="comboBoxLang.Items12"><value>it</value></data>
+	<data name="comboBoxLang.Items13"><value>no</value></data>
+	<data name="comboBoxLang.Items14"><value>pl</value></data>
+	<data name="comboBoxLang.Items15"><value>pt</value></data>
+	<data name="comboBoxLang.Items16"><value>ru</value></data>
+	<data name="comboBoxLang.Items17"><value>es</value></data>
+	<data name="comboBoxLang.Items18"><value>sv</value></data>
+	<data name="comboBoxLang.Items19"><value>th</value></data>
+	<data name="comboBoxLang.Items2"><value>en</value></data>
+	<data name="comboBoxLang.Items3"><value>ar</value></data>
+	<data name="comboBoxLang.Items4"><value>da</value></data>
+	<data name="comboBoxLang.Items5"><value>nl</value></data>
+	<data name="comboBoxLang.Items6"><value>fa</value></data>
+	<data name="comboBoxLang.Items7"><value>fi</value></data>
+	<data name="comboBoxLang.Items8"><value>fr</value></data>
+	<data name="comboBoxLang.Items9"><value>de</value></data>
+	<data name="comboBoxLang.Location" type="System.Drawing.Point, System.Drawing"><value>276, 1</value></data>
+	<data name="comboBoxLang.Margin" type="System.Windows.Forms.Padding, System.Windows.Forms"><value>0, 0, 0, 0</value></data>
+	<data name="comboBoxLang.Size" type="System.Drawing.Size, System.Drawing"><value>50, 20</value></data>
+	<data name="comboBoxLang.TabIndex" type="System.Int32, mscorlib"><value>2</value></data>
+	<data name="comboBoxQuery.Anchor" type="System.Windows.Forms.AnchorStyles, System.Windows.Forms"><value>Left, Right</value></data>
+	<data name="comboBoxQuery.Location" type="System.Drawing.Point, System.Drawing"><value>89, 1</value></data>
+	<data name="comboBoxQuery.Margin" type="System.Windows.Forms.Padding, System.Windows.Forms"><value>0, 0, 0, 0</value></data>
+	<data name="comboBoxQuery.Size" type="System.Drawing.Size, System.Drawing"><value>187, 20</value></data>
+	<data name="comboBoxQuery.TabIndex" type="System.Int32, mscorlib"><value>1</value></data>
+	<data name="label1.Anchor" type="System.Windows.Forms.AnchorStyles, System.Windows.Forms"><value>Left</value></data>
+	<data name="label1.AutoSize" type="System.Boolean, mscorlib"><value>True</value></data>
+	<data name="label1.Location" type="System.Drawing.Point, System.Drawing"><value>0, 5</value></data>
+	<data name="label1.Margin" type="System.Windows.Forms.Padding, System.Windows.Forms"><value>0, 0, 10, 0</value></data>
+	<data name="label1.Size" type="System.Drawing.Size, System.Drawing"><value>79, 12</value></data>
+	<data name="label1.TabIndex" type="System.Int32, mscorlib"><value>0</value></data>
+	<data name="label1.Text"><value>Search(C-S-f)</value></data>
+	<data name="tableLayoutPanel1.ColumnCount" type="System.Int32, mscorlib"><value>4</value></data>
+	<data name="tableLayoutPanel1.Dock" type="System.Windows.Forms.DockStyle, System.Windows.Forms"><value>Fill</value></data>
+	<data name="tableLayoutPanel1.LayoutSettings" type="System.Windows.Forms.TableLayoutSettings, System.Windows.Forms"><value>&lt;?xml version="1.0" encoding="utf-16"?&gt;&lt;TableLayoutSettings&gt;&lt;Controls&gt;&lt;Control Name="label1" Row="0" RowSpan="1" Column="0" ColumnSpan="1" /&gt;&lt;Control Name="comboBoxQuery" Row="0" RowSpan="1" Column="1" ColumnSpan="1" /&gt;&lt;Control Name="comboBoxLang" Row="0" RowSpan="1" Column="2" ColumnSpan="1" /&gt;&lt;Control Name="buttonSearch" Row="0" RowSpan="1" Column="3" ColumnSpan="1" /&gt;&lt;/Controls&gt;&lt;Columns Styles="AutoSize,0,Percent,100,AutoSize,0,AutoSize,0" /&gt;&lt;Rows Styles="Percent,100" /&gt;&lt;/TableLayoutSettings&gt;</value></data>
+	<data name="tableLayoutPanel1.Location" type="System.Drawing.Point, System.Drawing"><value>0, 0</value></data>
+	<data name="tableLayoutPanel1.Margin" type="System.Windows.Forms.Padding, System.Windows.Forms"><value>0, 0, 0, 0</value></data>
+	<data name="tableLayoutPanel1.RowCount" type="System.Int32, mscorlib"><value>1</value></data>
+	<data name="tableLayoutPanel1.Size" type="System.Drawing.Size, System.Drawing"><value>400, 22</value></data>
+	<data name="tableLayoutPanel1.TabIndex" type="System.Int32, mscorlib"><value>0</value></data>
+</root>

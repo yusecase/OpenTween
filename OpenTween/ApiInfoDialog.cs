@@ -37,6 +37,22 @@ namespace OpenTween
 {
     public partial class ApiInfoDialog : OTBaseForm
     {
+        private RateLimitCollection? rateLimits;
+        private IDisposable? unsubscribeRateLimitUpdate;
+
+        public RateLimitCollection? RateLimits
+        {
+            get => this.rateLimits;
+            set
+            {
+                if (this.rateLimits == value)
+                    return;
+
+                this.rateLimits = value;
+                this.InitializeRateLimits(value);
+            }
+        }
+
         public ApiInfoDialog()
             => this.InitializeComponent();
 
@@ -54,13 +70,19 @@ namespace OpenTween
             "/search/tweets",
         };
 
-        private void ApiInfoDialog_Shown(object sender, EventArgs e)
+        private void InitializeRateLimits(RateLimitCollection? rateLimits)
         {
+            this.ListViewApi.Items.Clear();
+            this.unsubscribeRateLimitUpdate?.Dispose();
+
+            if (rateLimits == null)
+                return;
+
             // TL更新用エンドポイントの追加
             var group = this.ListViewApi.Groups[0];
             foreach (var endpoint in this.tlEndpoints)
             {
-                var apiLimit = MyCommon.TwitterApiInfo.AccessLimit[endpoint];
+                var apiLimit = rateLimits[endpoint];
                 if (apiLimit == null)
                     continue;
 
@@ -69,13 +91,13 @@ namespace OpenTween
 
             // その他
             group = this.ListViewApi.Groups[1];
-            var apiStatuses = MyCommon.TwitterApiInfo.AccessLimit.Where(x => !this.tlEndpoints.Contains(x.Key)).OrderBy(x => x.Key);
+            var apiStatuses = rateLimits.Where(x => !this.tlEndpoints.Contains(x.Key)).OrderBy(x => x.Key);
             foreach (var (endpoint, apiLimit) in apiStatuses)
             {
                 this.AddListViewItem(endpoint, apiLimit, group);
             }
 
-            MyCommon.TwitterApiInfo.AccessLimitUpdated += this.TwitterApiStatus_AccessLimitUpdated;
+            this.unsubscribeRateLimitUpdate = rateLimits.SubscribeAccessLimitUpdated(this.TwitterApiStatus_AccessLimitUpdated);
         }
 
         private void AddListViewItem(string endpoint, ApiLimit apiLimit, ListViewGroup group)
@@ -96,7 +118,7 @@ namespace OpenTween
 
         private void UpdateEndpointLimit(string endpoint)
         {
-            var apiLimit = MyCommon.TwitterApiInfo.AccessLimit[endpoint];
+            var apiLimit = this.RateLimits?[endpoint];
             if (apiLimit != null)
             {
                 var item = this.ListViewApi.Items.Cast<ListViewItem>().Single(x => x.SubItems[0].Text == endpoint);
@@ -105,7 +127,7 @@ namespace OpenTween
             }
         }
 
-        private async void TwitterApiStatus_AccessLimitUpdated(object sender, EventArgs e)
+        private async void TwitterApiStatus_AccessLimitUpdated(RateLimitCollection sender, RateLimitCollection.AccessLimitUpdatedEventArgs e)
         {
             try
             {
@@ -115,7 +137,7 @@ namespace OpenTween
                 }
                 else
                 {
-                    var endpoint = ((TwitterApiStatus.AccessLimitUpdatedEventArgs)e).EndpointName;
+                    var endpoint = e.EndpointName;
                     if (endpoint != null)
                         this.UpdateEndpointLimit(endpoint);
                 }
@@ -130,13 +152,21 @@ namespace OpenTween
             }
         }
 
-        private void ApiInfoDialog_FormClosing(object sender, FormClosingEventArgs e)
-            => MyCommon.TwitterApiInfo.AccessLimitUpdated -= this.TwitterApiStatus_AccessLimitUpdated;
-
         protected override void ScaleControl(SizeF factor, BoundsSpecified specified)
         {
             base.ScaleControl(factor, specified);
             ScaleChildControl(this.ListViewApi, factor);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                this.unsubscribeRateLimitUpdate?.Dispose();
+                this.components?.Dispose();
+            }
+
+            base.Dispose(disposing);
         }
     }
 

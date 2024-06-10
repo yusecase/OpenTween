@@ -20,6 +20,7 @@
 // Boston, MA 02110-1301, USA.
 
 using System;
+using OpenTween.Models;
 using OpenTween.SocialProtocol.Twitter;
 using Xunit;
 
@@ -37,7 +38,7 @@ namespace OpenTween.SocialProtocol
                 TwitterAuthType = APIAuthType.OAuth1,
                 Token = "aaaaa",
                 TokenSecret = "bbbbb",
-                UserId = this.random.Next(),
+                UserId = this.random.Next().ToString(),
                 Username = "tetete",
             };
         }
@@ -58,7 +59,7 @@ namespace OpenTween.SocialProtocol
             accounts.LoadFromSettings(settingCommon);
 
             Assert.Single(accounts.Items);
-            Assert.Equal(settingCommon.UserAccounts[0].UserId, accounts.Primary.UserId);
+            Assert.Equal(new TwitterUserId(settingCommon.UserAccounts[0].UserId), accounts.Primary.UserId);
         }
 
         [Fact]
@@ -77,7 +78,7 @@ namespace OpenTween.SocialProtocol
             accounts.LoadFromSettings(settingCommon1);
 
             var accountItem1 = Assert.Single(accounts.Items);
-            Assert.Equal(settingCommon1.UserAccounts[0].UserId, accounts.Primary.UserId);
+            Assert.Equal(new TwitterUserId(settingCommon1.UserAccounts[0].UserId), accounts.Primary.UserId);
 
             var settingCommon2 = new SettingCommon
             {
@@ -111,7 +112,7 @@ namespace OpenTween.SocialProtocol
             accounts.LoadFromSettings(settingCommon1);
 
             var accountItem1 = Assert.Single(accounts.Items);
-            Assert.Equal(settingCommon1.UserAccounts[0].UserId, accounts.Primary.UserId);
+            Assert.Equal(new TwitterUserId(settingCommon1.UserAccounts[0].UserId), accounts.Primary.UserId);
 
             var settingCommon2 = new SettingCommon
             {
@@ -125,19 +126,122 @@ namespace OpenTween.SocialProtocol
             accounts.LoadFromSettings(settingCommon2);
 
             var accountItem2 = Assert.Single(accounts.Items);
-            Assert.Equal(settingCommon2.UserAccounts[0].UserId, accounts.Primary.UserId);
+            Assert.Equal(new TwitterUserId(settingCommon2.UserAccounts[0].UserId), accounts.Primary.UserId);
 
             // 同一の ID は同じインスタンスを使用
             Assert.Same(accountItem1, accountItem2);
             Assert.NotEqual(
-                settingCommon1.UserAccounts[0].UserId,
+                new TwitterUserId(settingCommon1.UserAccounts[0].UserId),
                 accountItem2.UserId
             );
             Assert.Equal(
-                settingCommon2.UserAccounts[0].UserId,
+                new TwitterUserId(settingCommon2.UserAccounts[0].UserId),
                 accountItem2.UserId
             );
             Assert.False(accountItem2.IsDisposed);
+        }
+
+        [Fact]
+        public void SecondaryAccounts_Test()
+        {
+            using var accounts = new AccountCollection();
+            accounts.LoadFromSettings(new()
+            {
+                UserAccounts = new()
+                {
+                    this.CreateAccountSetting("00000000-0000-4000-8000-000000000000"),
+                    this.CreateAccountSetting("00000000-0000-4000-8000-111111111111"),
+                },
+                SelectedAccountKey = new("00000000-0000-4000-8000-000000000000"),
+            });
+
+            var secondaryAccounts = accounts.SecondaryAccounts;
+            Assert.Single(secondaryAccounts);
+            Assert.Equal(new("00000000-0000-4000-8000-111111111111"), secondaryAccounts[0].UniqueKey);
+        }
+
+        [Fact]
+        public void SecondaryAccounts_DisabledTest()
+        {
+            var disabledAccountSetting = this.CreateAccountSetting("00000000-0000-4000-8000-111111111111");
+            disabledAccountSetting.Disabled = true;
+
+            using var accounts = new AccountCollection();
+            accounts.LoadFromSettings(new()
+            {
+                UserAccounts = new()
+                {
+                    this.CreateAccountSetting("00000000-0000-4000-8000-000000000000"),
+                    disabledAccountSetting,
+                },
+                SelectedAccountKey = new("00000000-0000-4000-8000-000000000000"),
+            });
+
+            Assert.Empty(accounts.SecondaryAccounts);
+        }
+
+        [Fact]
+        public void GetAccountForTab_DefaultTest()
+        {
+            using var accounts = new AccountCollection();
+            accounts.LoadFromSettings(new()
+            {
+                UserAccounts = new()
+                {
+                    this.CreateAccountSetting("00000000-0000-4000-8000-000000000000"),
+                },
+                SelectedAccountKey = new("00000000-0000-4000-8000-000000000000"),
+            });
+
+            var tabWithoutAccountKey = new PublicSearchTabModel("hoge");
+
+            // SourceAccountKey が null のタブに対しては Primary のアカウントを返す
+            var actual = accounts.GetAccountForTab(tabWithoutAccountKey);
+            Assert.IsType<TwitterAccount>(actual);
+            Assert.Equal(new("00000000-0000-4000-8000-000000000000"), actual.UniqueKey);
+        }
+
+        [Fact]
+        public void GetAccountForTab_SpecifiedAccountTest()
+        {
+            using var accounts = new AccountCollection();
+            accounts.LoadFromSettings(new()
+            {
+                UserAccounts = new()
+                {
+                    this.CreateAccountSetting("00000000-0000-4000-8000-000000000000"),
+                    this.CreateAccountSetting("00000000-0000-4000-8000-111111111111"),
+                },
+                SelectedAccountKey = new("00000000-0000-4000-8000-000000000000"),
+            });
+
+            var tabWithAccountKey = new RelatedPostsTabModel("hoge", new("00000000-0000-4000-8000-111111111111"), new());
+
+            // SourceAccountKey が設定されているタブに対しては対応するアカウントを返す
+            var actual = accounts.GetAccountForTab(tabWithAccountKey);
+            Assert.IsType<TwitterAccount>(actual);
+            Assert.Equal(new("00000000-0000-4000-8000-111111111111"), actual.UniqueKey);
+        }
+
+        [Fact]
+        public void GetAccountForTab_NotExistsTest()
+        {
+            using var accounts = new AccountCollection();
+            accounts.LoadFromSettings(new()
+            {
+                UserAccounts = new()
+                {
+                    this.CreateAccountSetting("00000000-0000-4000-8000-000000000000"),
+                },
+                SelectedAccountKey = new("00000000-0000-4000-8000-000000000000"),
+            });
+
+            var tabWithAccountKey = new RelatedPostsTabModel("hoge", new("00000000-0000-4000-8000-999999999999"), new());
+
+            // 存在しない AccountKey が設定されていた場合は InvalidAccount を返す
+            var actual = accounts.GetAccountForTab(tabWithAccountKey);
+            Assert.IsType<InvalidAccount>(actual);
+            Assert.Equal(new("00000000-0000-4000-8000-999999999999"), actual.UniqueKey);
         }
     }
 }

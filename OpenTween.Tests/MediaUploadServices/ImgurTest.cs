@@ -47,13 +47,11 @@ namespace OpenTween.MediaUploadServices
             mockApi.Setup((x) => x.UploadFileAsync(mediaItem, "てすと"))
                 .ReturnsAsync("https://i.imgur.com/aaaaaaa.png");
 
-            var param = new PostStatusParams
-            {
-                Text = "てすと",
-            };
-            await imgur.UploadAsync(new[] { mediaItem }, param);
+            var param = new PostStatusParams(Text: "てすと");
+            param = await imgur.UploadAsync(new[] { mediaItem }, param);
 
-            Assert.Equal("てすと https://i.imgur.com/aaaaaaa.png", param.Text);
+            var expected = new PostStatusParams(Text: "てすと https://i.imgur.com/aaaaaaa.png");
+            Assert.Equal(expected, param);
         }
 
         [Fact]
@@ -68,10 +66,8 @@ namespace OpenTween.MediaUploadServices
             mockApi.Setup((x) => x.UploadFileAsync(mediaItem, "てすと"))
                 .Throws<WebApiException>();
 
-            var param = new PostStatusParams
-            {
-                Text = "てすと",
-            };
+            var param = new PostStatusParams(Text: "てすと");
+
             await Assert.ThrowsAsync<WebApiException>(
                 () => imgur.UploadAsync(new[] { mediaItem }, param)
             );
@@ -89,10 +85,8 @@ namespace OpenTween.MediaUploadServices
             mockApi.Setup((x) => x.UploadFileAsync(mediaItem, "てすと"))
                 .Throws<OperationCanceledException>();
 
-            var param = new PostStatusParams
-            {
-                Text = "てすと",
-            };
+            var param = new PostStatusParams(Text: "てすと");
+
             await Assert.ThrowsAsync<WebApiException>(
                 () => imgur.UploadAsync(new[] { mediaItem }, param)
             );

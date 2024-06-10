@@ -28,6 +28,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Moq;
+using OpenTween.Models;
 using Xunit;
 
 namespace OpenTween
@@ -84,6 +85,29 @@ namespace OpenTween
         {
             var items = new[] { "aaa", "bbb" }.AsEnumerable();
             Assert.Equal(1, items.FindIndex(x => x == "bbb"));
+        }
+
+        [Fact]
+        public void MinMax_EmptyTest()
+        {
+            var items = Array.Empty<string>();
+            Assert.Throws<InvalidOperationException>(() => items.MinMax());
+        }
+
+        [Fact]
+        public void MinMax_SingleTest()
+        {
+            var items = new[] { "aaa" };
+            var expected = ("aaa", "aaa");
+            Assert.Equal(expected, items.MinMax());
+        }
+
+        [Fact]
+        public void MinMax_MultipleTest()
+        {
+            var items = new[] { "bbb", "aaa" };
+            var expected = ("aaa", "bbb");
+            Assert.Equal(expected, items.MinMax());
         }
 
         [Theory]

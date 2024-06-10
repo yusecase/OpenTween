@@ -1,0 +1,103 @@
+{
+  "data": {
+    "viewer": {
+      "has_community_memberships": false,
+      "create_community_action_result": {
+        "__typename": "CommunityCreateActionUnavailable",
+        "reason": "NotVerified",
+        "message": "Subscribe to Premium to be able to create a community."
+      },
+      "user_features": [
+        {
+          "feature": "mediatool_studio_library",
+          "enabled": false
+        }
+      ],
+      "user_results": {
+        "result": {
+          "__typename": "User",
+          "id": "VXNlcjo1MTQyNDE4MDE=",
+          "rest_id": "514241801",
+          "affiliates_highlighted_label": {},
+          "has_graduated_access": false,
+          "is_blue_verified": false,
+          "profile_image_shape": "Circle",
+          "legacy": {
+            "can_dm": true,
+            "can_media_tag": false,
+            "created_at": "Sun Mar 04 11:33:45 +0000 2012",
+            "default_profile": false,
+            "default_profile_image": false,
+            "description": "Windows 用 Twitter クライアント OpenTween のアカウントです。",
+            "entities": {
+              "description": {
+                "urls": []
+              },
+              "url": {
+                "urls": [
+                  {
+                    "display_url": "opentween.org",
+                    "expanded_url": "https://www.opentween.org/",
+                    "url": "https://t.co/An6OJeC28u",
+                    "indices": [
+                      0,
+                      23
+                    ]
+                  }
+                ]
+              }
+            },
+            "fast_followers_count": 0,
+            "favourites_count": 0,
+            "followers_count": 311,
+            "friends_count": 1,
+            "has_custom_timelines": false,
+            "is_translator": false,
+            "listed_count": 14,
+            "location": "",
+            "media_count": 0,
+            "name": "OpenTween",
+            "needs_phone_verification": false,
+            "normal_followers_count": 311,
+            "pinned_tweet_ids_str": [
+              "1617124615347908609"
+            ],
+            "possibly_sensitive": false,
+            "profile_image_url_https": "https://pbs.twimg.com/profile_images/661168792488153088/-UAFci6G_normal.png",
+            "profile_interstitial_type": "",
+            "screen_name": "opentween",
+            "statuses_count": 31,
+            "translator_type": "none",
+            "url": "https://t.co/An6OJeC28u",
+            "verified": false,
+            "want_retweets": false,
+            "withheld_in_countries": []
+          },
+          "tipjar_settings": {},
+          "legacy_extended_profile": {},
+          "is_profile_translatable": true,
+          "super_follows_application_status": "NotStarted",
+          "creator_subscriptions_count": 0
+        }
+      },
+      "educationFlags": [
+        {
+          "flag": "DMC16JPCompliancePrompt",
+          "timestamp": 1642842546424
+        },
+        {
+          "flag": "PinnedConversationsEducation",
+          "timestamp": 1643731261814
+        },
+        {
+          "flag": "NewUserPromptEducation",
+          "timestamp": 1700845271740
+        }
+      ],
+      "is_tfe_restricted_session": false,
+      "is_active_creator": false,
+      "super_followers_count": 0
+    },
+    "is_super_follow_subscriber": false
+  }
+}

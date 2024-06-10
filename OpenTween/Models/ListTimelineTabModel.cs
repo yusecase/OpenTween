@@ -28,11 +28,8 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using OpenTween.Setting;
+using OpenTween.SocialProtocol;
 
 namespace OpenTween.Models
 {
@@ -41,37 +38,46 @@ namespace OpenTween.Models
         public override MyCommon.TabUsageType TabType
             => MyCommon.TabUsageType.Lists;
 
-        public ListElement ListInfo { get; set; }
+        public SettingTabs.SettingTabListElement ListInfo { get; set; }
 
-        public PostId? OldestId { get; set; }
-
-        public string? CursorTop { get; set; }
-
-        public string? CursorBottom { get; set; }
-
-        public ListTimelineTabModel(string tabName, ListElement list)
+        public ListTimelineTabModel(string tabName, SettingTabs.SettingTabListElement list)
             : base(tabName)
         {
             this.ListInfo = list;
         }
 
-        public override async Task RefreshAsync(Twitter tw, bool backward, bool startup, IProgress<string> progress)
+        public ListTimelineTabModel(string tabName, ListElement list)
+            : this(tabName, new SettingTabs.SettingTabListElement(list))
+        {
+        }
+
+        public override async Task RefreshAsync(ISocialAccount account, bool backward, IProgress<string> progress)
         {
             if (this.ListInfo == null || this.ListInfo.Id == 0)
                 return;
 
-            bool read;
-            if (!SettingManager.Instance.Common.UnreadManage)
-                read = true;
-            else
-                read = startup && SettingManager.Instance.Common.Read;
-
             progress.Report("List refreshing...");
 
-            await tw.GetListStatus(read, this, backward, startup)
+            var firstLoad = !this.IsFirstLoadCompleted;
+            var count = Twitter.GetApiResultCount(MyCommon.WORKERTYPE.List, backward, firstLoad);
+            var cursor = backward ? this.CursorBottom : this.CursorTop;
+
+            var response = await account.Client.GetListTimeline(this.ListInfo.Id, count, cursor, firstLoad)
                 .ConfigureAwait(false);
 
+            foreach (var post in response.Posts)
+                this.AddPostQueue(post);
+
             TabInformations.GetInstance().DistributePosts();
+
+            if (response.CursorTop != null && !backward)
+                this.CursorTop = response.CursorTop;
+
+            if (response.CursorBottom != null)
+                this.CursorBottom = response.CursorBottom;
+
+            if (firstLoad)
+                this.IsFirstLoadCompleted = true;
 
             progress.Report("List refreshed");
         }

@@ -28,11 +28,8 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using OpenTween.Setting;
+using OpenTween.SocialProtocol;
 
 namespace OpenTween.Models
 {
@@ -40,14 +37,6 @@ namespace OpenTween.Models
     {
         public override MyCommon.TabUsageType TabType
             => MyCommon.TabUsageType.PublicSearch;
-
-        public PostId? OldestId { get; set; }
-
-        public PostId? SinceId { get; set; }
-
-        public string? CursorTop { get; set; }
-
-        public string? CursorBottom { get; set; }
 
         public string SearchWords
         {
@@ -77,23 +66,33 @@ namespace OpenTween.Models
         {
         }
 
-        public override async Task RefreshAsync(Twitter tw, bool backward, bool startup, IProgress<string> progress)
+        public override async Task RefreshAsync(ISocialAccount account, bool backward, IProgress<string> progress)
         {
             if (MyCommon.IsNullOrEmpty(this.SearchWords))
                 return;
 
-            bool read;
-            if (!SettingManager.Instance.Common.UnreadManage)
-                read = true;
-            else
-                read = startup && SettingManager.Instance.Common.Read;
-
             progress.Report("Search refreshing...");
 
-            await tw.GetSearch(read, this, backward)
+            var firstLoad = !this.IsFirstLoadCompleted;
+            var count = Twitter.GetApiResultCount(MyCommon.WORKERTYPE.PublicSearch, backward, firstLoad);
+            var cursor = backward ? this.CursorBottom : this.CursorTop;
+
+            var response = await account.Client.GetSearchTimeline(this.SearchWords, this.SearchLang, count, cursor, firstLoad)
                 .ConfigureAwait(false);
 
+            foreach (var post in response.Posts)
+                this.AddPostQueue(post);
+
             TabInformations.GetInstance().DistributePosts();
+
+            if (response.CursorTop != null && !backward)
+                this.CursorTop = response.CursorTop;
+
+            if (response.CursorBottom != null)
+                this.CursorBottom = response.CursorBottom;
+
+            if (firstLoad)
+                this.IsFirstLoadCompleted = true;
 
             progress.Report("Search refreshed");
         }
@@ -103,10 +102,9 @@ namespace OpenTween.Models
         /// </summary>
         public void ResetFetchIds()
         {
-            this.SinceId = null;
-            this.OldestId = null;
             this.CursorTop = null;
             this.CursorBottom = null;
+            this.IsFirstLoadCompleted = false;
         }
     }
 }

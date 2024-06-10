@@ -36,6 +36,7 @@ using System.Threading.Tasks;
 using System.Web;
 using OpenTween.Api;
 using OpenTween.Api.DataModel;
+using OpenTween.SocialProtocol.Twitter;
 
 namespace OpenTween.Connection
 {
@@ -56,14 +57,17 @@ namespace OpenTween.Connection
 
         internal ITwitterCredential Credential { get; }
 
+        private readonly TwitterAccountState accountState;
+
         public TwitterApiConnection()
-            : this(new TwitterCredentialNone())
+            : this(new TwitterCredentialNone(), new())
         {
         }
 
-        public TwitterApiConnection(ITwitterCredential credential)
+        public TwitterApiConnection(ITwitterCredential credential, TwitterAccountState accountState)
         {
             this.Credential = credential;
+            this.accountState = accountState;
 
             this.InitializeHttpClients();
             Networking.WebProxyChanged += this.Networking_WebProxyChanged;
@@ -97,9 +101,9 @@ namespace OpenTween.Connection
                 );
 
                 if (endpointName != null)
-                    MyCommon.TwitterApiInfo.UpdateFromHeader(responseMessage.Headers, endpointName);
+                    this.accountState.RateLimits.UpdateFromHeader(responseMessage.Headers, endpointName);
 
-                await TwitterApiConnection.CheckStatusCode(responseMessage)
+                await TwitterApiConnection.CheckStatusCode(responseMessage, this.accountState)
                     .ConfigureAwait(false);
 
                 var response = new ApiResponse(responseMessage);
@@ -126,7 +130,7 @@ namespace OpenTween.Connection
         /// </summary>
         private void ThrowIfRateLimitExceeded(string endpointName)
         {
-            var limit = MyCommon.TwitterApiInfo.AccessLimit[endpointName];
+            var limit = this.accountState.RateLimits[endpointName];
             if (limit == null)
                 return;
 
@@ -165,13 +169,14 @@ namespace OpenTween.Connection
             return await task;
         }
 
-        protected static async Task CheckStatusCode(HttpResponseMessage response)
+        protected static async Task CheckStatusCode(HttpResponseMessage response, TwitterAccountState? accountState)
         {
             var statusCode = response.StatusCode;
 
             if ((int)statusCode >= 200 && (int)statusCode <= 299)
             {
-                Twitter.AccountState = MyCommon.ACCOUNT_STATE.Valid;
+                if (accountState != null)
+                    accountState.HasUnrecoverableError = false;
                 return;
             }
 
@@ -185,7 +190,10 @@ namespace OpenTween.Connection
             if (string.IsNullOrWhiteSpace(responseText))
             {
                 if (statusCode == HttpStatusCode.Unauthorized)
-                    Twitter.AccountState = MyCommon.ACCOUNT_STATE.Invalid;
+                {
+                    if (accountState != null)
+                        accountState.HasUnrecoverableError = true;
+                }
 
                 throw new TwitterApiException(statusCode, responseText);
             }
@@ -200,7 +208,8 @@ namespace OpenTween.Connection
                 var errorCodes = error.Errors.Select(x => x.Code);
                 if (errorCodes.Any(x => x == TwitterErrorCode.InternalError || x == TwitterErrorCode.SuspendedAccount))
                 {
-                    Twitter.AccountState = MyCommon.ACCOUNT_STATE.Invalid;
+                    if (accountState != null)
+                        accountState.HasUnrecoverableError = true;
                 }
 
                 throw new TwitterApiException(statusCode, error, responseText);
@@ -324,7 +333,7 @@ namespace OpenTween.Connection
                 var responseText = await content.ReadAsStringAsync()
                     .ConfigureAwait(false);
 
-                await TwitterApiConnection.CheckStatusCode(response)
+                await TwitterApiConnection.CheckStatusCode(response, accountState: null)
                     .ConfigureAwait(false);
 
                 var responseParams = HttpUtility.ParseQueryString(responseText);

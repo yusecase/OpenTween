@@ -49,6 +49,7 @@ using OpenTween.Api.TwitterV2;
 using OpenTween.Connection;
 using OpenTween.Models;
 using OpenTween.Setting;
+using OpenTween.SocialProtocol.Twitter;
 
 namespace OpenTween
 {
@@ -127,15 +128,15 @@ namespace OpenTween
         /// <summary>
         /// ツイートへのパーマリンクURLを判定する正規表現
         /// </summary>
-        public static readonly Regex StatusUrlRegex = new(@"https?://([^.]+\.)?twitter\.com/(#!/)?(?<ScreenName>[a-zA-Z0-9_]+)/status(es)?/(?<StatusId>[0-9]+)(/photo)?", RegexOptions.IgnoreCase);
+        public static readonly Regex StatusUrlRegex = new(@"https?://([^.]+\.)?(twitter|x)\.com/(#!/)?(?<ScreenName>[a-zA-Z0-9_]+)/status(es)?/(?<StatusId>[0-9]+)(/photo)?", RegexOptions.IgnoreCase);
 
         /// <summary>
         /// attachment_url に指定可能な URL を判定する正規表現
         /// </summary>
         public static readonly Regex AttachmentUrlRegex = new(
             @"https?://(
-   twitter\.com/[0-9A-Za-z_]+/status/[0-9]+
- | mobile\.twitter\.com/[0-9A-Za-z_]+/status/[0-9]+
+   (twitter|x)\.com/[0-9A-Za-z_]+/status/[0-9]+
+ | mobile\.(twitter|x)\.com/[0-9A-Za-z_]+/status/[0-9]+
  | twitter\.com/messages/compose\?recipient_id=[0-9]+(&.+)?
 )$",
             RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
@@ -159,9 +160,13 @@ namespace OpenTween
 
         public TwitterApi Api { get; }
 
-        public TwitterConfiguration Configuration { get; private set; }
+        public TwitterAccountState AccountState { get; private set; } = new();
 
-        public TwitterTextConfiguration TextConfiguration { get; private set; }
+        public TwitterConfiguration Configuration
+            => this.AccountState.Configuration;
+
+        public TwitterTextConfiguration TextConfiguration
+            => this.AccountState.TextConfiguration;
 
         public bool GetFollowersSuccess { get; private set; } = false;
 
@@ -170,8 +175,6 @@ namespace OpenTween
         private delegate void GetIconImageDelegate(PostClass post);
 
         private readonly object lockObj = new();
-        private ISet<long> followerId = new HashSet<long>();
-        private long[] noRTId = Array.Empty<long>();
 
         private readonly TwitterPostFactory postFactory;
         private readonly PostUrlExpander urlExpander;
@@ -180,57 +183,30 @@ namespace OpenTween
 
         public Twitter(TwitterApi api)
         {
-            this.postFactory = new(TabInformations.GetInstance());
+            this.postFactory = new(TabInformations.GetInstance(), SettingManager.Instance.Common);
             this.urlExpander = new(ShortUrl.Instance);
 
             this.Api = api;
-            this.Configuration = TwitterConfiguration.DefaultConfiguration();
-            this.TextConfiguration = TwitterTextConfiguration.DefaultConfiguration();
         }
 
-        public TwitterApiAccessLevel AccessLevel
-            => MyCommon.TwitterApiInfo.AccessLevel;
-
         protected void ResetApiStatus()
-            => MyCommon.TwitterApiInfo.Reset();
+            => this.AccountState.RateLimits.Clear();
 
         public void ClearAuthInfo()
         {
-            Twitter.AccountState = MyCommon.ACCOUNT_STATE.Invalid;
+            this.AccountState.HasUnrecoverableError = true;
             this.ResetApiStatus();
         }
 
-        public void VerifyCredentials()
+        public void Initialize(TwitterApiConnection apiConnection, TwitterAccountState accountState)
         {
-            try
-            {
-                this.VerifyCredentialsAsync().Wait();
-            }
-            catch (AggregateException ex) when (ex.InnerException is WebApiException)
-            {
-                throw new WebApiException(ex.InnerException.Message, ex);
-            }
-        }
-
-        public async Task VerifyCredentialsAsync()
-        {
-            var user = await this.Api.AccountVerifyCredentials()
-                .ConfigureAwait(false);
-
-            this.UpdateUserStats(user);
-        }
-
-        public void Initialize(ITwitterCredential credential, string username, long userId)
-        {
-            // OAuth認証
-            if (credential is TwitterCredentialNone)
-                Twitter.AccountState = MyCommon.ACCOUNT_STATE.Invalid;
+            this.AccountState = accountState;
 
             this.ResetApiStatus();
-            this.Api.Initialize(credential, userId, username);
+            this.Api.Initialize(apiConnection);
         }
 
-        public async Task<PostClass?> PostStatus(PostStatusParams param)
+        public async Task<PostClass?> PostStatus(CreateTweetParams param)
         {
             this.CheckAccountState();
 
@@ -250,8 +226,8 @@ namespace OpenTween
                 var request = new CreateTweetRequest
                 {
                     TweetText = param.Text,
-                    InReplyToTweetId = param.InReplyToStatusId?.ToTwitterStatusId(),
-                    ExcludeReplyUserIds = param.ExcludeReplyUserIds.Select(x => x.ToString()).ToArray(),
+                    InReplyToTweetId = param.InReplyTo?.StatusId.ToTwitterStatusId(),
+                    ExcludeReplyUserIds = param.ExcludeReplyUserIds.OfType<TwitterUserId>().ToArray(),
                     MediaIds = param.MediaIds.Select(x => x.ToString()).ToArray(),
                     AttachmentUrl = param.AttachmentUrl,
                 };
@@ -263,10 +239,10 @@ namespace OpenTween
             {
                 using var response = await this.Api.StatusesUpdate(
                         param.Text,
-                        param.InReplyToStatusId?.ToTwitterStatusId(),
+                        param.InReplyTo?.StatusId.ToTwitterStatusId(),
                         param.MediaIds,
                         param.AutoPopulateReplyMetadata,
-                        param.ExcludeReplyUserIds,
+                        param.ExcludeReplyUserIds.OfType<TwitterUserId>().ToArray(),
                         param.AttachmentUrl
                     )
                     .ConfigureAwait(false);
@@ -275,7 +251,7 @@ namespace OpenTween
                     .ConfigureAwait(false);
             }
 
-            this.UpdateUserStats(status.User);
+            this.AccountState.UpdateFromUser(status.User);
 
             if (status.IdStr == this.previousStatusId)
                 throw new WebApiException("OK:Delaying?");
@@ -283,26 +259,9 @@ namespace OpenTween
             this.previousStatusId = status.IdStr;
 
             // 投稿したものを返す
-            var post = this.CreatePostsFromStatusData(status);
-            if (this.ReadOwnPost) post.IsRead = true;
-            return post;
-        }
+            var post = this.CreatePostsFromStatusData(status, firstLoad: false);
 
-        public async Task DeleteTweet(TwitterStatusId tweetId)
-        {
-            if (this.Api.AuthType == APIAuthType.TwitterComCookie)
-            {
-                var request = new DeleteTweetRequest
-                {
-                    TweetId = tweetId,
-                };
-                await request.Send(this.Api.Connection);
-            }
-            else
-            {
-                await this.Api.StatusesDestroy(tweetId)
-                    .IgnoreResponse();
-            }
+            return post;
         }
 
         public async Task<long> UploadMedia(IMediaItem item, string? mediaCategory = null)
@@ -365,7 +324,6 @@ namespace OpenTween
         public async Task SendDirectMessage(string postStr, long? mediaId = null)
         {
             this.CheckAccountState();
-            this.CheckAccessLevel(TwitterApiAccessLevel.ReadWriteAndDirectMessage);
 
             var mc = Twitter.DMSendTextRegex.Match(postStr);
 
@@ -375,82 +333,18 @@ namespace OpenTween
             var recipient = await this.GetUserInfo(recipientName)
                 .ConfigureAwait(false);
 
-            using var response = await this.Api.DirectMessagesEventsNew(recipient.Id, body, mediaId)
+            var recipientUserId = new TwitterUserId(recipient.IdStr);
+            using var response = await this.Api.DirectMessagesEventsNew(recipientUserId, body, mediaId)
                 .ConfigureAwait(false);
 
             var messageEventSingle = await response.LoadJsonAsync()
                 .ConfigureAwait(false);
 
-            await this.CreateDirectMessagesEventFromJson(messageEventSingle, read: true)
-                .ConfigureAwait(false);
-        }
-
-        public async Task<PostClass?> PostRetweet(PostId id, bool read)
-        {
-            this.CheckAccountState();
-
-            // データ部分の生成
-            var post = TabInformations.GetInstance()[id];
-            if (post == null)
-                throw new WebApiException("Err:Target isn't found.");
-
-            var target = post.RetweetedId ?? id;  // 再RTの場合は元発言をRT
-
-            if (this.Api.AuthType == APIAuthType.TwitterComCookie)
-            {
-                var request = new CreateRetweetRequest
-                {
-                    TweetId = target.ToTwitterStatusId(),
-                };
-                await request.Send(this.Api.Connection).ConfigureAwait(false);
-                return null;
-            }
-
-            using var response = await this.Api.StatusesRetweet(target.ToTwitterStatusId())
+            var post = await this.CreateDirectMessagesEventFromJson(messageEventSingle, firstLoad: false)
                 .ConfigureAwait(false);
 
-            var status = await response.LoadJsonAsync()
-                .ConfigureAwait(false);
-
-            // 二重取得回避
-            lock (this.lockObj)
-            {
-                var statusId = new TwitterStatusId(status.IdStr);
-                if (TabInformations.GetInstance().ContainsKey(statusId))
-                    return null;
-            }
-
-            // Retweet判定
-            if (status.RetweetedStatus == null)
-                throw new WebApiException("Invalid Json!");
-
-            // Retweetしたものを返す
-            return this.CreatePostsFromStatusData(status) with
-            {
-                IsMe = true,
-                IsRead = this.ReadOwnPost ? true : read,
-                IsOwl = false,
-            };
-        }
-
-        public async Task DeleteRetweet(PostClass post)
-        {
-            if (post.RetweetedId == null)
-                throw new ArgumentException("post is not retweeted status", nameof(post));
-
-            if (this.Api.AuthType == APIAuthType.TwitterComCookie)
-            {
-                var request = new DeleteRetweetRequest
-                {
-                    SourceTweetId = post.RetweetedId.ToTwitterStatusId(),
-                };
-                await request.Send(this.Api.Connection).ConfigureAwait(false);
-            }
-            else
-            {
-                await this.Api.StatusesDestroy(post.StatusId.ToTwitterStatusId())
-                    .IgnoreResponse();
-            }
+            var dmTab = TabInformations.GetInstance().DirectMessageTab;
+            dmTab.AddPostQueue(post);
         }
 
         public async Task<TwitterUser> GetUserInfo(string screenName)
@@ -475,85 +369,22 @@ namespace OpenTween
             }
         }
 
-        public async Task PostFavAdd(TwitterStatusId statusId)
-        {
-            if (this.Api.AuthType == APIAuthType.TwitterComCookie)
-            {
-                var request = new FavoriteTweetRequest
-                {
-                    TweetId = statusId,
-                };
-
-                await request.Send(this.Api.Connection)
-                    .ConfigureAwait(false);
-            }
-            else
-            {
-                try
-                {
-                    await this.Api.FavoritesCreate(statusId)
-                        .IgnoreResponse()
-                        .ConfigureAwait(false);
-                }
-                catch (TwitterApiException ex)
-                    when (ex.Errors.All(x => x.Code == TwitterErrorCode.AlreadyFavorited))
-                {
-                    // エラーコード 139 のみの場合は成功と見なす
-                }
-            }
-        }
-
-        public async Task PostFavRemove(TwitterStatusId statusId)
-        {
-            if (this.Api.AuthType == APIAuthType.TwitterComCookie)
-            {
-                var request = new UnfavoriteTweetRequest
-                {
-                    TweetId = statusId,
-                };
-
-                await request.Send(this.Api.Connection)
-                    .ConfigureAwait(false);
-            }
-            else
-            {
-                await this.Api.FavoritesDestroy(statusId)
-                    .IgnoreResponse()
-                    .ConfigureAwait(false);
-            }
-        }
-
         public string Username
-            => this.Api.CurrentScreenName;
+            => this.AccountState.UserName;
 
-        public long UserId
-            => this.Api.CurrentUserId;
-
-        public static MyCommon.ACCOUNT_STATE AccountState { get; set; } = MyCommon.ACCOUNT_STATE.Valid;
+        public TwitterUserId UserId
+            => this.AccountState.UserId;
 
         public bool RestrictFavCheck { get; set; }
 
-        public bool ReadOwnPost { get; set; }
+        public int? FollowersCount
+            => this.AccountState.FollowersCount;
 
-        public int FollowersCount { get; private set; }
+        public int? FriendsCount
+            => this.AccountState.FriendsCount;
 
-        public int FriendsCount { get; private set; }
-
-        public int StatusesCount { get; private set; }
-
-        public string Location { get; private set; } = "";
-
-        public string Bio { get; private set; } = "";
-
-        /// <summary>ユーザーのフォロワー数などの情報を更新します</summary>
-        private void UpdateUserStats(TwitterUser self)
-        {
-            this.FollowersCount = self.FollowersCount;
-            this.FriendsCount = self.FriendsCount;
-            this.StatusesCount = self.StatusesCount;
-            this.Location = self.Location ?? "";
-            this.Bio = self.Description ?? "";
-        }
+        public int? StatusesCount
+            => this.AccountState.StatusesCount;
 
         /// <summary>
         /// 渡された取得件数がWORKERTYPEに応じた取得可能範囲に収まっているか検証する
@@ -595,7 +426,7 @@ namespace OpenTween
         /// <summary>
         /// WORKERTYPEに応じた取得件数を取得する
         /// </summary>
-        public static int GetApiResultCount(MyCommon.WORKERTYPE type, bool more, bool startup)
+        public static int GetApiResultCount(MyCommon.WORKERTYPE type, bool more, bool firstLoad)
         {
             if (SettingManager.Instance.Common.UseAdditionalCount)
             {
@@ -622,7 +453,7 @@ namespace OpenTween
                 {
                     return Math.Min(SettingManager.Instance.Common.MoreCountApi, GetMaxApiResultCount(type));
                 }
-                if (startup && SettingManager.Instance.Common.FirstCountApi != 0 && type != MyCommon.WORKERTYPE.Reply)
+                if (firstLoad && SettingManager.Instance.Common.FirstCountApi != 0 && type != MyCommon.WORKERTYPE.Reply)
                 {
                     return Math.Min(SettingManager.Instance.Common.FirstCountApi, GetMaxApiResultCount(type));
                 }
@@ -637,134 +468,36 @@ namespace OpenTween
             return Math.Min(count, GetMaxApiResultCount(type));
         }
 
-        public async Task GetHomeTimelineApi(bool read, HomeTabModel tab, bool more, bool startup)
+        public async Task GetUserTimelineApi(UserTimelineTabModel tab, bool more, bool firstLoad)
         {
             this.CheckAccountState();
 
-            var count = GetApiResultCount(MyCommon.WORKERTYPE.Timeline, more, startup);
+            var count = GetApiResultCount(MyCommon.WORKERTYPE.UserTimeline, more, firstLoad);
 
             TwitterStatus[] statuses;
             if (this.Api.AuthType == APIAuthType.TwitterComCookie)
             {
-                var request = new HomeLatestTimelineRequest
-                {
-                    Count = count,
-                    Cursor = more ? tab.CursorBottom : tab.CursorTop,
-                };
-                var response = await request.Send(this.Api.Connection)
-                    .ConfigureAwait(false);
-
-                statuses = response.ToTwitterStatuses();
-
-                tab.CursorBottom = response.CursorBottom;
-
-                if (!more)
-                    tab.CursorTop = response.CursorTop;
-            }
-            else if (SettingManager.Instance.Common.EnableTwitterV2Api)
-            {
-                var request = new GetTimelineRequest(this.UserId)
-                {
-                    MaxResults = count,
-                    UntilId = more ? tab.OldestId as TwitterStatusId : null,
-                };
-
-                var response = await request.Send(this.Api.Connection)
-                    .ConfigureAwait(false);
-
-                if (response.Data == null || response.Data.Length == 0)
-                    return;
-
-                var tweetIds = response.Data.Select(x => x.Id).ToList();
-
-                statuses = await this.Api.StatusesLookup(tweetIds)
-                    .ConfigureAwait(false);
-            }
-            else
-            {
-                var maxId = more ? tab.OldestId : null;
-
-                statuses = await this.Api.StatusesHomeTimeline(count, maxId as TwitterStatusId)
-                    .ConfigureAwait(false);
-            }
-
-            var minimumId = this.CreatePostsFromJson(statuses, MyCommon.WORKERTYPE.Timeline, tab, read);
-            if (minimumId != null)
-                tab.OldestId = minimumId;
-        }
-
-        public async Task GetMentionsTimelineApi(bool read, MentionsTabModel tab, bool more, bool startup)
-        {
-            this.CheckAccountState();
-
-            var count = GetApiResultCount(MyCommon.WORKERTYPE.Reply, more, startup);
-
-            TwitterStatus[] statuses;
-            if (this.Api.AuthType == APIAuthType.TwitterComCookie)
-            {
-                var request = new NotificationsMentionsRequest
-                {
-                    Count = Math.Min(count, 50),
-                    Cursor = more ? tab.CursorBottom : tab.CursorTop,
-                };
-                var response = await request.Send(this.Api.Connection)
-                    .ConfigureAwait(false);
-
-                statuses = response.Statuses;
-
-                tab.CursorBottom = response.CursorBottom;
-
-                if (!more)
-                    tab.CursorTop = response.CursorTop;
-            }
-            else
-            {
-                if (more)
-                {
-                    statuses = await this.Api.StatusesMentionsTimeline(count, maxId: tab.OldestId as TwitterStatusId)
-                        .ConfigureAwait(false);
-                }
-                else
-                {
-                    statuses = await this.Api.StatusesMentionsTimeline(count)
-                        .ConfigureAwait(false);
-                }
-            }
-
-            var minimumId = this.CreatePostsFromJson(statuses, MyCommon.WORKERTYPE.Reply, tab, read);
-            if (minimumId != null)
-                tab.OldestId = minimumId;
-        }
-
-        public async Task GetUserTimelineApi(bool read, UserTimelineTabModel tab, bool more)
-        {
-            this.CheckAccountState();
-
-            var count = GetApiResultCount(MyCommon.WORKERTYPE.UserTimeline, more, false);
-
-            TwitterStatus[] statuses;
-            if (this.Api.AuthType == APIAuthType.TwitterComCookie)
-            {
-                var userId = tab.UserId;
-                if (MyCommon.IsNullOrEmpty(userId))
+                var userId = tab.UserId as TwitterUserId;
+                if (userId == null)
                 {
                     var user = await this.GetUserInfo(tab.ScreenName)
                         .ConfigureAwait(false);
 
-                    userId = user.IdStr;
-                    tab.UserId = user.IdStr;
+                    userId = new TwitterUserId(user.IdStr);
+                    tab.UserId = userId;
                 }
 
+                var cursor = more ? tab.CursorBottom : tab.CursorTop;
                 var request = new UserTweetsAndRepliesRequest(userId)
                 {
                     Count = count,
-                    Cursor = more ? tab.CursorBottom : tab.CursorTop,
+                    Cursor = cursor?.As<TwitterGraphqlCursor>(),
                 };
                 var response = await request.Send(this.Api.Connection)
                     .ConfigureAwait(false);
 
                 statuses = response.ToTwitterStatuses()
-                    .Where(x => x.User.IdStr == userId) // リプライツリーに含まれる他ユーザーのツイートを除外
+                    .Where(x => x.User.IdStr == userId.Id) // リプライツリーに含まれる他ユーザーのツイートを除外
                     .ToArray();
 
                 tab.CursorBottom = response.CursorBottom;
@@ -774,466 +507,47 @@ namespace OpenTween
             }
             else
             {
-                if (more)
-                {
-                    statuses = await this.Api.StatusesUserTimeline(tab.ScreenName, count, maxId: tab.OldestId as TwitterStatusId)
-                        .ConfigureAwait(false);
-                }
-                else
-                {
-                    statuses = await this.Api.StatusesUserTimeline(tab.ScreenName, count)
-                        .ConfigureAwait(false);
-                }
-            }
+                var maxId = more ? tab.CursorBottom?.As<TwitterStatusId>() : null;
 
-            var minimumId = this.CreatePostsFromJson(statuses, MyCommon.WORKERTYPE.UserTimeline, tab, read);
-
-            if (minimumId != null)
-                tab.OldestId = minimumId;
-        }
-
-        public async Task<PostClass> GetStatusApi(bool read, TwitterStatusId id)
-        {
-            this.CheckAccountState();
-
-            TwitterStatus status;
-            if (this.Api.AuthType == APIAuthType.TwitterComCookie)
-            {
-                var request = new TweetDetailRequest
-                {
-                    FocalTweetId = id,
-                };
-                var tweets = await request.Send(this.Api.Connection).ConfigureAwait(false);
-                status = tweets.Select(x => x.ToTwitterStatus())
-                    .Where(x => x.IdStr == id.Id)
-                    .FirstOrDefault() ?? throw new WebApiException("Empty result set");
-            }
-            else
-            {
-                status = await this.Api.StatusesShow(id)
+                statuses = await this.Api.StatusesUserTimeline(tab.ScreenName, count, maxId)
                     .ConfigureAwait(false);
+
+                if (statuses.Length > 0)
+                {
+                    var min = statuses.Select(x => new TwitterStatusId(x.IdStr)).Min();
+                    tab.CursorBottom = new QueryCursor<TwitterStatusId>(CursorType.Bottom, min);
+                }
             }
 
-            var item = this.CreatePostsFromStatusData(status);
+            var posts = this.CreatePostsFromJson(statuses, firstLoad);
 
-            item.IsRead = read;
-            if (item.IsMe && !read && this.ReadOwnPost) item.IsRead = true;
-
-            return item;
-        }
-
-        public async Task GetStatusApi(bool read, TwitterStatusId id, TabModel tab)
-        {
-            var post = await this.GetStatusApi(read, id)
-                .ConfigureAwait(false);
-
-            // 非同期アイコン取得＆StatusDictionaryに追加
-            if (tab != null && tab.IsInnerStorageTabType)
+            foreach (var post in posts)
                 tab.AddPostQueue(post);
-            else
-                TabInformations.GetInstance().AddPost(post);
         }
 
-        private PostClass CreatePostsFromStatusData(TwitterStatus status)
-            => this.CreatePostsFromStatusData(status, favTweet: false);
+        private PostClass CreatePostsFromStatusData(TwitterStatus status, bool firstLoad)
+            => this.CreatePostsFromStatusData(status, firstLoad, favTweet: false);
 
-        private PostClass CreatePostsFromStatusData(TwitterStatus status, bool favTweet)
+        internal PostClass CreatePostsFromStatusData(TwitterStatus status, bool firstLoad, bool favTweet)
         {
-            var post = this.postFactory.CreateFromStatus(status, this.UserId, this.followerId, favTweet);
+            var post = this.postFactory.CreateFromStatus(status, this.UserId, this.AccountState.FollowerIds, firstLoad, favTweet);
             _ = this.urlExpander.Expand(post);
 
             return post;
         }
 
-        private PostId? CreatePostsFromJson(TwitterStatus[] items, MyCommon.WORKERTYPE gType, TabModel? tab, bool read)
+        internal PostClass[] CreatePostsFromJson(TwitterStatus[] statuses, bool firstLoad)
         {
-            PostId? minimumId = null;
-
-            var posts = items.Select(x => this.CreatePostsFromStatusData(x)).ToArray();
+            var posts = statuses.Select(x => this.CreatePostsFromStatusData(x, firstLoad)).ToArray();
 
             TwitterPostFactory.AdjustSortKeyForPromotedPost(posts);
 
-            foreach (var post in posts)
-            {
-                if (!post.IsPromoted)
-                {
-                    if (minimumId == null || minimumId > post.StatusId)
-                        minimumId = post.StatusId;
-                }
-
-                // 二重取得回避
-                lock (this.lockObj)
-                {
-                    var id = post.StatusId;
-                    if (tab == null)
-                    {
-                        if (TabInformations.GetInstance().ContainsKey(id)) continue;
-                    }
-                    else
-                    {
-                        if (tab.Contains(id)) continue;
-                    }
-                }
-
-                // RT禁止ユーザーによるもの
-                if (gType != MyCommon.WORKERTYPE.UserTimeline &&
-                    post.RetweetedByUserId != null && this.noRTId.Contains(post.RetweetedByUserId.Value)) continue;
-
-                post.IsRead = read;
-                if (post.IsMe && !read && this.ReadOwnPost) post.IsRead = true;
-
-                if (tab != null && tab.IsInnerStorageTabType)
-                    tab.AddPostQueue(post);
-                else
-                    TabInformations.GetInstance().AddPost(post);
-            }
-
-            return minimumId;
+            return posts;
         }
 
-        private PostId? CreatePostsFromSearchJson(TwitterStatus[] statuses, PublicSearchTabModel tab, bool read, bool more)
-        {
-            PostId? minimumId = null;
-
-            var posts = statuses.Select(x => this.CreatePostsFromStatusData(x)).ToArray();
-
-            TwitterPostFactory.AdjustSortKeyForPromotedPost(posts);
-
-            foreach (var post in posts)
-            {
-                if (!post.IsPromoted)
-                {
-                    if (minimumId == null || minimumId > post.StatusId)
-                        minimumId = post.StatusId;
-
-                    if (!more && (tab.SinceId == null || post.StatusId > tab.SinceId))
-                        tab.SinceId = post.StatusId;
-                }
-
-                // 二重取得回避
-                lock (this.lockObj)
-                {
-                    if (tab.Contains(post.StatusId))
-                        continue;
-                }
-
-                post.IsRead = read;
-                if ((post.IsMe && !read) && this.ReadOwnPost) post.IsRead = true;
-
-                tab.AddPostQueue(post);
-            }
-
-            return minimumId;
-        }
-
-        private long? CreateFavoritePostsFromJson(TwitterStatus[] items, bool read)
-        {
-            var favTab = TabInformations.GetInstance().FavoriteTab;
-            long? minimumId = null;
-
-            foreach (var status in items)
-            {
-                if (minimumId == null || minimumId.Value > status.Id)
-                    minimumId = status.Id;
-
-                // 二重取得回避
-                lock (this.lockObj)
-                {
-                    if (favTab.Contains(new TwitterStatusId(status.IdStr)))
-                        continue;
-                }
-
-                var post = this.CreatePostsFromStatusData(status, true);
-
-                post.IsRead = read;
-
-                TabInformations.GetInstance().AddPost(post);
-            }
-
-            return minimumId;
-        }
-
-        public async Task GetListStatus(bool read, ListTimelineTabModel tab, bool more, bool startup)
-        {
-            var count = GetApiResultCount(MyCommon.WORKERTYPE.List, more, startup);
-
-            TwitterStatus[] statuses;
-            if (this.Api.AuthType == APIAuthType.TwitterComCookie)
-            {
-                var request = new ListLatestTweetsTimelineRequest(tab.ListInfo.Id.ToString())
-                {
-                    Count = count,
-                    Cursor = more ? tab.CursorBottom : tab.CursorTop,
-                };
-                var response = await request.Send(this.Api.Connection)
-                    .ConfigureAwait(false);
-
-                var convertedStatuses = response.ToTwitterStatuses();
-
-                if (!SettingManager.Instance.Common.IsListsIncludeRts)
-                    convertedStatuses = convertedStatuses.Where(x => x.RetweetedStatus == null).ToArray();
-
-                statuses = convertedStatuses.ToArray();
-                tab.CursorBottom = response.CursorBottom;
-
-                if (!more)
-                    tab.CursorTop = response.CursorTop;
-            }
-            else if (more)
-            {
-                statuses = await this.Api.ListsStatuses(tab.ListInfo.Id, count, maxId: tab.OldestId as TwitterStatusId, includeRTs: SettingManager.Instance.Common.IsListsIncludeRts)
-                    .ConfigureAwait(false);
-            }
-            else
-            {
-                statuses = await this.Api.ListsStatuses(tab.ListInfo.Id, count, includeRTs: SettingManager.Instance.Common.IsListsIncludeRts)
-                    .ConfigureAwait(false);
-            }
-
-            var minimumId = this.CreatePostsFromJson(statuses, MyCommon.WORKERTYPE.List, tab, read);
-
-            if (minimumId != null)
-                tab.OldestId = minimumId;
-        }
-
-        /// <summary>
-        /// startStatusId からリプライ先の発言を辿る。発言は posts 以外からは検索しない。
-        /// </summary>
-        /// <returns>posts の中から検索されたリプライチェインの末端</returns>
-        internal static PostClass FindTopOfReplyChain(IDictionary<PostId, PostClass> posts, PostId startStatusId)
-        {
-            if (!posts.ContainsKey(startStatusId))
-                throw new ArgumentException("startStatusId (" + startStatusId.Id + ") が posts の中から見つかりませんでした。", nameof(startStatusId));
-
-            var nextPost = posts[startStatusId];
-            while (nextPost.InReplyToStatusId != null)
-            {
-                if (!posts.ContainsKey(nextPost.InReplyToStatusId))
-                    break;
-                nextPost = posts[nextPost.InReplyToStatusId];
-            }
-
-            return nextPost;
-        }
-
-        public async Task GetRelatedResult(bool read, RelatedPostsTabModel tab)
-        {
-            var targetPost = tab.TargetPost;
-
-            if (targetPost.RetweetedId != null)
-            {
-                var originalPost = targetPost with
-                {
-                    StatusId = targetPost.RetweetedId,
-                    RetweetedId = null,
-                    RetweetedBy = null,
-                };
-                targetPost = originalPost;
-            }
-
-            var relPosts = new Dictionary<PostId, PostClass>();
-            if (targetPost.TextFromApi.Contains("@") && targetPost.InReplyToStatusId == null)
-            {
-                // 検索結果対応
-                var p = TabInformations.GetInstance()[targetPost.StatusId];
-                if (p != null && p.InReplyToStatusId != null)
-                {
-                    targetPost = p;
-                }
-                else
-                {
-                    p = await this.GetStatusApi(read, targetPost.StatusId.ToTwitterStatusId())
-                        .ConfigureAwait(false);
-                    targetPost = p;
-                }
-            }
-            relPosts.Add(targetPost.StatusId, targetPost);
-
-            Exception? lastException = null;
-
-            // in_reply_to_status_id を使用してリプライチェインを辿る
-            var nextPost = FindTopOfReplyChain(relPosts, targetPost.StatusId);
-            var loopCount = 1;
-            while (nextPost.InReplyToStatusId != null && loopCount++ <= 20)
-            {
-                var inReplyToId = nextPost.InReplyToStatusId;
-
-                var inReplyToPost = TabInformations.GetInstance()[inReplyToId];
-                if (inReplyToPost == null)
-                {
-                    try
-                    {
-                        inReplyToPost = await this.GetStatusApi(read, inReplyToId.ToTwitterStatusId())
-                            .ConfigureAwait(false);
-                    }
-                    catch (WebApiException ex)
-                    {
-                        lastException = ex;
-                        break;
-                    }
-                }
-
-                relPosts.Add(inReplyToPost.StatusId, inReplyToPost);
-
-                nextPost = FindTopOfReplyChain(relPosts, nextPost.StatusId);
-            }
-
-            // MRTとかに対応のためツイート内にあるツイートを指すURLを取り込む
-            var text = targetPost.Text;
-            var ma = Twitter.StatusUrlRegex.Matches(text).Cast<Match>()
-                .Concat(Twitter.ThirdPartyStatusUrlRegex.Matches(text).Cast<Match>());
-            foreach (var match in ma)
-            {
-                var statusId = new TwitterStatusId(match.Groups["StatusId"].Value);
-                if (!relPosts.ContainsKey(statusId))
-                {
-                    var p = TabInformations.GetInstance()[statusId];
-                    if (p == null)
-                    {
-                        try
-                        {
-                            p = await this.GetStatusApi(read, statusId)
-                                .ConfigureAwait(false);
-                        }
-                        catch (WebApiException ex)
-                        {
-                            lastException = ex;
-                            break;
-                        }
-                    }
-
-                    if (p != null)
-                        relPosts.Add(p.StatusId, p);
-                }
-            }
-
-            try
-            {
-                var firstPost = nextPost;
-                var posts = await this.GetConversationPosts(firstPost, targetPost)
-                    .ConfigureAwait(false);
-
-                foreach (var post in posts.OrderBy(x => x.StatusId))
-                {
-                    if (relPosts.ContainsKey(post.StatusId))
-                        continue;
-
-                    // リプライチェーンが繋がらないツイートは除外
-                    if (post.InReplyToStatusId == null || !relPosts.ContainsKey(post.InReplyToStatusId))
-                        continue;
-
-                    relPosts.Add(post.StatusId, post);
-                }
-            }
-            catch (WebException ex)
-            {
-                lastException = ex;
-            }
-
-            relPosts.Values.ToList().ForEach(p =>
-            {
-                var post = p with { };
-                if (post.IsMe && !read && this.ReadOwnPost)
-                    post.IsRead = true;
-                else
-                    post.IsRead = read;
-
-                tab.AddPostQueue(post);
-            });
-
-            if (lastException != null)
-                throw new WebApiException(lastException.Message, lastException);
-        }
-
-        private async Task<PostClass[]> GetConversationPosts(PostClass firstPost, PostClass targetPost)
-        {
-            var conversationId = firstPost.StatusId;
-            var query = $"conversation_id:{conversationId.Id}";
-
-            if (targetPost.InReplyToUser != null && targetPost.InReplyToUser != targetPost.ScreenName)
-                query += $" (from:{targetPost.ScreenName} to:{targetPost.InReplyToUser}) OR (from:{targetPost.InReplyToUser} to:{targetPost.ScreenName})";
-            else
-                query += $" from:{targetPost.ScreenName} to:{targetPost.ScreenName}";
-
-            TwitterStatus[] statuses;
-            if (this.Api.AuthType == APIAuthType.TwitterComCookie)
-            {
-                var request = new SearchTimelineRequest(query);
-                var response = await request.Send(this.Api.Connection)
-                    .ConfigureAwait(false);
-
-                statuses = response.ToTwitterStatuses();
-            }
-            else
-            {
-                var response = await this.Api.SearchTweets(query, count: 100)
-                    .ConfigureAwait(false);
-
-                statuses = response.Statuses;
-            }
-
-            return statuses.Select(x => this.CreatePostsFromStatusData(x)).ToArray();
-        }
-
-        public async Task GetSearch(bool read, PublicSearchTabModel tab, bool more)
-        {
-            var count = GetApiResultCount(MyCommon.WORKERTYPE.PublicSearch, more, false);
-
-            TwitterStatus[] statuses;
-            if (this.Api.AuthType == APIAuthType.TwitterComCookie)
-            {
-                var query = tab.SearchWords;
-
-                if (!MyCommon.IsNullOrEmpty(tab.SearchLang))
-                    query = $"({query}) lang:{tab.SearchLang}";
-
-                var request = new SearchTimelineRequest(query)
-                {
-                    Count = count,
-                    Cursor = more ? tab.CursorBottom : tab.CursorTop,
-                };
-                var response = await request.Send(this.Api.Connection)
-                    .ConfigureAwait(false);
-
-                statuses = response.ToTwitterStatuses();
-
-                tab.CursorBottom = response.CursorBottom;
-
-                if (!more)
-                    tab.CursorTop = response.CursorTop;
-            }
-            else
-            {
-                TwitterStatusId? maxId = null;
-                TwitterStatusId? sinceId = null;
-                if (more)
-                {
-                    maxId = tab.OldestId as TwitterStatusId;
-                }
-                else
-                {
-                    sinceId = tab.SinceId as TwitterStatusId;
-                }
-
-                var searchResult = await this.Api.SearchTweets(tab.SearchWords, tab.SearchLang, count, maxId, sinceId)
-                    .ConfigureAwait(false);
-
-                statuses = searchResult.Statuses;
-            }
-
-            if (!TabInformations.GetInstance().ContainsTab(tab))
-                return;
-
-            var minimumId = this.CreatePostsFromSearchJson(statuses, tab, read, more);
-
-            if (minimumId != null)
-                tab.OldestId = minimumId;
-        }
-
-        public async Task GetDirectMessageEvents(bool read, DirectMessagesTabModel dmTab, bool backward)
+        public async Task GetDirectMessageEvents(DirectMessagesTabModel dmTab, bool backward, bool firstLoad)
         {
             this.CheckAccountState();
-            this.CheckAccessLevel(TwitterApiAccessLevel.ReadWriteAndDirectMessage);
 
             var count = 50;
 
@@ -1251,11 +565,14 @@ namespace OpenTween
 
             dmTab.NextCursor = eventList.NextCursor;
 
-            await this.CreateDirectMessagesEventFromJson(eventList, read)
+            var posts = await this.CreateDirectMessagesEventFromJson(eventList, firstLoad)
                 .ConfigureAwait(false);
+
+            foreach (var post in posts)
+                dmTab.AddPostQueue(post);
         }
 
-        private async Task CreateDirectMessagesEventFromJson(TwitterMessageEventSingle eventSingle, bool read)
+        private async Task<PostClass> CreateDirectMessagesEventFromJson(TwitterMessageEventSingle eventSingle, bool firstLoad)
         {
             var eventList = new TwitterMessageEventList
             {
@@ -1263,96 +580,52 @@ namespace OpenTween
                 Events = new[] { eventSingle.Event },
             };
 
-            await this.CreateDirectMessagesEventFromJson(eventList, read)
+            var posts = await this.CreateDirectMessagesEventFromJson(eventList, firstLoad)
                 .ConfigureAwait(false);
+
+            return posts.Single();
         }
 
-        private async Task CreateDirectMessagesEventFromJson(TwitterMessageEventList eventList, bool read)
+        private async Task<PostClass[]> CreateDirectMessagesEventFromJson(TwitterMessageEventList eventList, bool firstLoad)
         {
             var events = eventList.Events
                 .Where(x => x.Type == "message_create")
                 .ToArray();
 
             if (events.Length == 0)
-                return;
+                return Array.Empty<PostClass>();
 
             var userIds = Enumerable.Concat(
-                events.Select(x => x.MessageCreate.SenderId),
-                events.Select(x => x.MessageCreate.Target.RecipientId)
+                events.Select(x => new TwitterUserId(x.MessageCreate.SenderId)),
+                events.Select(x => new TwitterUserId(x.MessageCreate.Target.RecipientId))
             ).Distinct().ToArray();
 
             var users = (await this.Api.UsersLookup(userIds).ConfigureAwait(false))
-                .ToDictionary(x => x.IdStr);
+                .ToDictionary(x => new TwitterUserId(x.IdStr));
 
             var apps = eventList.Apps ?? new Dictionary<string, TwitterMessageEventList.App>();
 
-            this.CreateDirectMessagesEventFromJson(events, users, apps, read);
+            return this.CreateDirectMessagesEventFromJson(events, users, apps, firstLoad);
         }
 
-        private void CreateDirectMessagesEventFromJson(
-            IEnumerable<TwitterMessageEvent> events,
-            IReadOnlyDictionary<string, TwitterUser> users,
+        private PostClass[] CreateDirectMessagesEventFromJson(
+            IReadOnlyCollection<TwitterMessageEvent> events,
+            IReadOnlyDictionary<TwitterUserId, TwitterUser> users,
             IReadOnlyDictionary<string, TwitterMessageEventList.App> apps,
-            bool read)
+            bool firstLoad)
         {
-            var dmTab = TabInformations.GetInstance().DirectMessageTab;
+            var posts = new List<PostClass>(capacity: events.Count);
 
             foreach (var eventItem in events)
             {
-                var post = this.postFactory.CreateFromDirectMessageEvent(eventItem, users, apps, this.UserId);
+                var post = this.postFactory.CreateFromDirectMessageEvent(eventItem, users, apps, this.UserId, firstLoad);
+
                 _ = this.urlExpander.Expand(post);
 
-                post.IsRead = read;
-                if (post.IsMe && !read && this.ReadOwnPost)
-                    post.IsRead = true;
-
-                dmTab.AddPostQueue(post);
-            }
-        }
-
-        public async Task GetFavoritesApi(bool read, FavoritesTabModel tab, bool backward)
-        {
-            this.CheckAccountState();
-
-            var count = GetApiResultCount(MyCommon.WORKERTYPE.Favorites, backward, false);
-
-            TwitterStatus[] statuses;
-            if (this.Api.AuthType == APIAuthType.TwitterComCookie)
-            {
-                var request = new LikesRequest
-                {
-                    UserId = this.UserId.ToString(CultureInfo.InvariantCulture),
-                    Count = count,
-                    Cursor = backward ? tab.CursorBottom : tab.CursorTop,
-                };
-                var response = await request.Send(this.Api.Connection)
-                    .ConfigureAwait(false);
-
-                statuses = response.ToTwitterStatuses();
-
-                tab.CursorBottom = response.CursorBottom;
-
-                if (!backward)
-                    tab.CursorTop = response.CursorTop;
-            }
-            else
-            {
-                if (backward)
-                {
-                    statuses = await this.Api.FavoritesList(count, maxId: tab.OldestId)
-                        .ConfigureAwait(false);
-                }
-                else
-                {
-                    statuses = await this.Api.FavoritesList(count)
-                        .ConfigureAwait(false);
-                }
+                posts.Add(post);
             }
 
-            var minimumId = this.CreateFavoritePostsFromJson(statuses, read);
-
-            if (minimumId != null)
-                tab.OldestId = minimumId.Value;
+            return posts.ToArray();
         }
 
         /// <summary>
@@ -1364,7 +637,7 @@ namespace OpenTween
             if (MyCommon.EndingFlag) return;
 
             var cursor = -1L;
-            var newFollowerIds = Enumerable.Empty<long>();
+            var newFollowerIds = Enumerable.Empty<PersonId>();
             do
             {
                 var ret = await this.Api.FollowersIds(cursor)
@@ -1373,13 +646,12 @@ namespace OpenTween
                 if (ret.Ids == null)
                     throw new WebApiException("ret.ids == null");
 
-                newFollowerIds = newFollowerIds.Concat(ret.Ids);
+                newFollowerIds = newFollowerIds.Concat(ret.Ids.Select(x => new TwitterUserId(x)));
                 cursor = ret.NextCursor;
             }
             while (cursor != 0);
 
-            this.followerId = newFollowerIds.ToHashSet();
-            TabInformations.GetInstance().RefreshOwl(this.followerId);
+            this.AccountState.FollowerIds = newFollowerIds.ToHashSet();
 
             this.GetFollowersSuccess = true;
         }
@@ -1392,23 +664,11 @@ namespace OpenTween
         {
             if (MyCommon.EndingFlag) return;
 
-            this.noRTId = await this.Api.NoRetweetIds()
+            var noRetweetUserIds = await this.Api.NoRetweetIds()
                 .ConfigureAwait(false);
 
+            this.AccountState.NoRetweetUserIds = new HashSet<TwitterUserId>(noRetweetUserIds);
             this.GetNoRetweetSuccess = true;
-        }
-
-        /// <summary>
-        /// t.co の文字列長などの設定情報を更新します
-        /// </summary>
-        /// <exception cref="WebApiException"/>
-        public async Task RefreshConfiguration()
-        {
-            this.Configuration = await this.Api.Configuration()
-                .ConfigureAwait(false);
-
-            // TextConfiguration 相当の JSON を得る API が存在しないため、TransformedURLLength のみ help/configuration.json に合わせて更新する
-            this.TextConfiguration.TransformedURLLength = this.Configuration.ShortUrlLengthHttps;
         }
 
         public async Task GetListsApi()
@@ -1495,18 +755,19 @@ namespace OpenTween
             }
         }
 
-        public async Task<TwitterApiStatus?> GetInfoApi()
+        public async Task<TwitterRateLimitCollection?> GetInfoApi()
         {
-            if (Twitter.AccountState != MyCommon.ACCOUNT_STATE.Valid) return null;
+            if (this.AccountState.HasUnrecoverableError)
+                return null;
 
             if (MyCommon.EndingFlag) return null;
 
             var limits = await this.Api.ApplicationRateLimitStatus()
                 .ConfigureAwait(false);
 
-            MyCommon.TwitterApiInfo.UpdateFromJson(limits);
+            this.AccountState.RateLimits.UpdateFromJson(limits);
 
-            return MyCommon.TwitterApiInfo;
+            return this.AccountState.RateLimits;
         }
 
         /// <summary>
@@ -1518,13 +779,13 @@ namespace OpenTween
             if (MyCommon.EndingFlag) return;
 
             var cursor = -1L;
-            var newBlockIds = Enumerable.Empty<long>();
+            var newBlockIds = Enumerable.Empty<PersonId>();
             do
             {
                 var ret = await this.Api.BlocksIds(cursor)
                     .ConfigureAwait(false);
 
-                newBlockIds = newBlockIds.Concat(ret.Ids);
+                newBlockIds = newBlockIds.Concat(ret.Ids.Select(x => new TwitterUserId(x)));
                 cursor = ret.NextCursor;
             }
             while (cursor != 0);
@@ -1532,7 +793,7 @@ namespace OpenTween
             var blockIdsSet = newBlockIds.ToHashSet();
             blockIdsSet.Remove(this.UserId); // 元のソースにあったので一応残しておく
 
-            TabInformations.GetInstance().BlockIds = blockIdsSet;
+            this.AccountState.BlockedUserIds = blockIdsSet;
         }
 
         /// <summary>
@@ -1546,22 +807,16 @@ namespace OpenTween
             var ids = await TwitterIds.GetAllItemsAsync(x => this.Api.MutesUsersIds(x))
                 .ConfigureAwait(false);
 
-            TabInformations.GetInstance().MuteUserIds = ids.ToHashSet();
+            this.AccountState.MutedUserIds = ids.ToHashSet<PersonId>();
         }
 
         public string[] GetHashList()
             => this.postFactory.GetReceivedHashtags();
 
-        private void CheckAccountState()
+        internal void CheckAccountState()
         {
-            if (Twitter.AccountState != MyCommon.ACCOUNT_STATE.Valid)
+            if (this.AccountState.HasUnrecoverableError)
                 throw new WebApiException("Auth error. Check your account");
-        }
-
-        private void CheckAccessLevel(TwitterApiAccessLevel accessLevelFlags)
-        {
-            if (!this.AccessLevel.HasFlag(accessLevelFlags))
-                throw new WebApiException("Auth Err:try to re-authorization.");
         }
 
         public int GetTextLengthRemain(string postText)

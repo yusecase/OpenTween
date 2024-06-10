@@ -29,6 +29,7 @@
 using System;
 using System.Net;
 using OpenTween.Api.DataModel;
+using OpenTween.Models;
 
 namespace OpenTween
 {
@@ -40,7 +41,7 @@ namespace OpenTween
 
         public UserInfo(TwitterUser user)
         {
-            this.Id = user.Id;
+            this.Id = new TwitterUserId(user.IdStr);
             this.Name = WebUtility.HtmlDecode(user.Name).Trim();
             this.ScreenName = user.ScreenName;
             this.Location = WebUtility.HtmlDecode(user.Location);
@@ -68,7 +69,7 @@ namespace OpenTween
             }
         }
 
-        public long Id = 0;
+        public PersonId Id = null!;
         public string Name = "";
         public string ScreenName = "";
         public string Location = "";

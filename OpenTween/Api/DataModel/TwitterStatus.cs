@@ -62,23 +62,14 @@ namespace OpenTween.Api.DataModel
         [DataMember(Name = "full_text")]
         public string FullText { get; set; }
 
-        [DataMember(Name = "id")]
-        public long Id { get; set; }
-
         [DataMember(Name = "id_str")]
         public string IdStr { get; set; }
 
         [DataMember(Name = "in_reply_to_screen_name")]
         public string? InReplyToScreenName { get; set; }
 
-        [DataMember(Name = "in_reply_to_status_id")]
-        public long? InReplyToStatusId { get; set; }
-
         [DataMember(Name = "in_reply_to_status_id_str")]
         public string? InReplyToStatusIdStr { get; set; }
-
-        [DataMember(Name = "in_reply_to_user_id")]
-        public long? InReplyToUserId { get; set; }
 
         [DataMember(Name = "in_reply_to_user_id_str")]
         public string? InReplyToUserIdStr { get; set; }
@@ -97,9 +88,6 @@ namespace OpenTween.Api.DataModel
 
         [DataMember(Name = "quote_count")]
         public int? QuoteCount { get; set; }
-
-        [DataMember(Name = "quoted_status_id", IsRequired = false)]
-        public long? QuotedStatusId { get; set; }
 
         [DataMember(Name = "quoted_status_id_str", IsRequired = false)]
         public string? QuotedStatusIdStr { get; set; }
@@ -233,23 +221,14 @@ namespace OpenTween.Api.DataModel
         [DataMember(Name = "filter_level")]
         public string FilterLevel { get; set; }
 
-        [DataMember(Name = "id")]
-        public long Id { get; set; }
-
         [DataMember(Name = "id_str")]
         public string IdStr { get; set; }
 
         [DataMember(Name = "in_reply_to_screen_name")]
         public string? InReplyToScreenName { get; set; }
 
-        [DataMember(Name = "in_reply_to_status_id")]
-        public long? InReplyToStatusId { get; set; }
-
         [DataMember(Name = "in_reply_to_status_id_str")]
         public string? InReplyToStatusIdStr { get; set; }
-
-        [DataMember(Name = "in_reply_to_user_id")]
-        public long? InReplyToUserId { get; set; }
 
         [DataMember(Name = "in_reply_to_user_id_str")]
         public string? InReplyToUserIdStr { get; set; }
@@ -268,9 +247,6 @@ namespace OpenTween.Api.DataModel
 
         [DataMember(Name = "quote_count")]
         public int? QuoteCount { get; set; }
-
-        [DataMember(Name = "quoted_status_id", IsRequired = false)]
-        public long? QuotedStatusId { get; set; }
 
         [DataMember(Name = "quoted_status_id_str", IsRequired = false)]
         public string? QuotedStatusIdStr { get; set; }
@@ -324,19 +300,15 @@ namespace OpenTween.Api.DataModel
                 FavoriteCount = this.FavoriteCount,
                 Favorited = this.Favorited,
                 FilterLevel = this.FilterLevel,
-                Id = this.Id,
                 IdStr = this.IdStr,
                 InReplyToScreenName = this.InReplyToScreenName,
-                InReplyToStatusId = this.InReplyToStatusId,
                 InReplyToStatusIdStr = this.InReplyToStatusIdStr,
-                InReplyToUserId = this.InReplyToUserId,
                 InReplyToUserIdStr = this.InReplyToUserIdStr,
                 IsQuoteStatus = this.IsQuoteStatus,
                 Lang = this.Lang,
                 Place = this.Place,
                 PossiblySensitive = this.PossiblySensitive,
                 QuoteCount = this.QuoteCount,
-                QuotedStatusId = this.QuotedStatusId,
                 QuotedStatusIdStr = this.QuotedStatusIdStr,
                 QuotedStatus = this.QuotedStatus?.Normalize(),
                 QuotedStatusPermalink = this.QuotedStatusPermalink,
@@ -395,17 +367,11 @@ namespace OpenTween.Api.DataModel
         [DataMember(Name = "created_at")]
         public string CreatedAt { get; set; }
 
-        [DataMember(Name = "id")]
-        public long Id { get; set; }
-
         [DataMember(Name = "id_str")]
         public string IdStr { get; set; }
 
         [DataMember(Name = "text")]
         public string Text { get; set; }
-
-        [DataMember(Name = "sender_id")]
-        public long SenderId { get; set; }
 
         [DataMember(Name = "sender_id_str")]
         public string SenderIdStr { get; set; }
@@ -415,9 +381,6 @@ namespace OpenTween.Api.DataModel
 
         [DataMember(Name = "sender", IsRequired = false)]
         public TwitterUser? Sender { get; set; }
-
-        [DataMember(Name = "recipient_id")]
-        public long RecipientId { get; set; }
 
         [DataMember(Name = "recipient_id_str")]
         public string RecipientIdStr { get; set; }

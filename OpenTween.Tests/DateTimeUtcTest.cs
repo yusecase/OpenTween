@@ -330,5 +330,17 @@ namespace OpenTween
             Assert.Equal(expectedParsed, parsed);
             Assert.Equal(expectedResult, result);
         }
+
+        public static readonly TheoryData<string, DateTimeUtc> ParseISOFixtures = new()
+        {
+            { "2024-01-02T12:34:56.789Z", new(2024, 1, 2, 12, 34, 56, 789) },
+            { "2024-01-02T12:34:56.789+09:00", new(2024, 1, 2, 3, 34, 56, 789) },
+            { "2024-01-02", new(2024, 1, 2, 0, 0, 0, 0) },
+        };
+
+        [Theory]
+        [MemberData(nameof(ParseISOFixtures))]
+        public void ParseISO_Test(string input, DateTimeUtc expected)
+            => Assert.Equal(expected, DateTimeUtc.ParseISO(input));
     }
 }

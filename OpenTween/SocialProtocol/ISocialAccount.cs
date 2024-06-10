@@ -23,19 +23,30 @@
 
 using System;
 using OpenTween.Connection;
+using OpenTween.Models;
 
 namespace OpenTween.SocialProtocol
 {
     public interface ISocialAccount : IDisposable
     {
-        public long UserId { get; }
+        public string AccountType { get; }
+
+        public AccountKey UniqueKey { get; }
+
+        public PersonId UserId { get; }
 
         public string UserName { get; }
 
         public IApiConnection Connection { get; }
 
+        public ISocialProtocolClient Client { get; }
+
+        public ISocialAccountState AccountState { get; }
+
         public bool IsDisposed { get; }
 
         public void Initialize(UserAccount accountSettings, SettingCommon settingCommon);
+
+        public bool CanUsePostId(PostId postId);
     }
 }

@@ -113,7 +113,7 @@ namespace OpenTween
         }
 
         public string GetUrlForImageSearch()
-            => this.CurrentThumbnail.FullSizeImageUrl ?? this.CurrentThumbnail.ThumbnailImageUrl;
+            => this.CurrentThumbnail.FullSizeImageUrl ?? this.CurrentThumbnail.ThumbnailImageUrl ?? this.CurrentThumbnail.MediaPageUrl;
 
         public Uri GetImageSearchUriGoogle()
         {

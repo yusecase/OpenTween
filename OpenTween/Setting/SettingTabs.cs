@@ -104,7 +104,34 @@ namespace OpenTween
             /// <summary>
             /// 表示するリスト (<see cref="MyCommon.TabUsageType.Lists"/> で使用)
             /// </summary>
-            public ListElement? ListInfo { get; set; }
+            public SettingTabListElement? ListInfo { get; set; }
+        }
+
+        [XmlType("ListElement")]
+        public class SettingTabListElement
+        {
+            public long Id { get; set; }
+
+            public string Username { get; set; } = "";
+
+            public string Name { get; set; } = "";
+
+            public bool IsPublic { get; set; }
+
+            public SettingTabListElement()
+            {
+            }
+
+            public SettingTabListElement(ListElement listElement)
+            {
+                this.Id = listElement.Id;
+                this.Username = listElement.Username;
+                this.Name = listElement.Name;
+                this.IsPublic = listElement.IsPublic;
+            }
+
+            public override string ToString()
+                => $"@{this.Username}/{this.Name} [{(this.IsPublic ? "Public" : "Protected")}]";
         }
     }
 }

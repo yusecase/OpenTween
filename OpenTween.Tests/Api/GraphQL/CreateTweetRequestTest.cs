@@ -22,6 +22,7 @@
 using System.Threading.Tasks;
 using Moq;
 using OpenTween.Connection;
+using OpenTween.Models;
 using Xunit;
 
 namespace OpenTween.Api.GraphQL
@@ -78,7 +79,7 @@ namespace OpenTween.Api.GraphQL
             {
                 TweetText = "tetete",
                 InReplyToTweetId = new("12345"),
-                ExcludeReplyUserIds = new[] { "11111", "22222" },
+                ExcludeReplyUserIds = new TwitterUserId[] { new("11111"), new("22222") },
             };
             await request.Send(mock.Object);
             mock.VerifyAll();

@@ -44,7 +44,7 @@ namespace OpenTween.Thumbnail.Services
 
         public override Task<ThumbnailInfo?> GetThumbnailInfoAsync(string url, PostClass post, CancellationToken token)
         {
-            return Task.Run<ThumbnailInfo?>(() =>
+            return Task.Run(() =>
             {
                 if (GetApiConnection == null)
                     return null;
@@ -55,31 +55,33 @@ namespace OpenTween.Thumbnail.Services
                 var largeUrl = url + ":large";
                 var apiConnection = GetApiConnection();
 
-                return new TonTwitterCom.Thumbnail(apiConnection)
+                return new ThumbnailInfo(largeUrl, url)
                 {
-                    MediaPageUrl = largeUrl,
-                    ThumbnailImageUrl = url,
-                    TooltipText = null,
                     FullSizeImageUrl = largeUrl,
+                    Loader = new ThumbnailLoader(apiConnection, new(url)),
                 };
             },
             token);
         }
 
-        public class Thumbnail : ThumbnailInfo
+        public class ThumbnailLoader : IThumbnailLoader
         {
             private readonly IApiConnection apiConnection;
+            private readonly Uri imageUri;
 
-            public Thumbnail(IApiConnection apiConnection)
-                => this.apiConnection = apiConnection;
+            public ThumbnailLoader(IApiConnection apiConnection, Uri imageUri)
+            {
+                this.apiConnection = apiConnection;
+                this.imageUri = imageUri;
+            }
 
-            public override Task<MemoryImage> LoadThumbnailImageAsync(HttpClient http, CancellationToken cancellationToken)
+            public Task<MemoryImage> Load(HttpClient http, CancellationToken cancellationToken)
             {
                 return Task.Run(async () =>
                 {
                     var request = new GetRequest
                     {
-                        RequestUri = new(this.ThumbnailImageUrl),
+                        RequestUri = this.imageUri,
                     };
 
                     using var response = await this.apiConnection.SendAsync(request)

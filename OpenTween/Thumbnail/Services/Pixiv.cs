@@ -57,23 +57,29 @@ namespace OpenTween.Thumbnail.Services
 
             if (thumb == null) return null;
 
-            return new Pixiv.Thumbnail
+            return thumb with
             {
-                MediaPageUrl = thumb.MediaPageUrl,
-                ThumbnailImageUrl = thumb.ThumbnailImageUrl,
-                TooltipText = thumb.TooltipText,
-                FullSizeImageUrl = thumb.FullSizeImageUrl,
+                Loader = new ThumbnailLoader(new(thumb.MediaPageUrl), new(thumb.ThumbnailImageUrl)),
             };
         }
 
-        public class Thumbnail : ThumbnailInfo
+        public class ThumbnailLoader : IThumbnailLoader
         {
-            public async override Task<MemoryImage> LoadThumbnailImageAsync(HttpClient http, CancellationToken cancellationToken)
+            private readonly Uri mediaPageUri;
+            private readonly Uri thumbnailImageUri;
+
+            public ThumbnailLoader(Uri mediaPageUri, Uri thumbnailImageUri)
             {
-                var request = new HttpRequestMessage(HttpMethod.Get, this.ThumbnailImageUrl);
+                this.mediaPageUri = mediaPageUri;
+                this.thumbnailImageUri = thumbnailImageUri;
+            }
+
+            public async Task<MemoryImage> Load(HttpClient http, CancellationToken cancellationToken)
+            {
+                var request = new HttpRequestMessage(HttpMethod.Get, this.thumbnailImageUri);
 
                 request.Headers.Add("User-Agent", Networking.GetUserAgentString(fakeMSIE: true));
-                request.Headers.Referrer = new Uri(this.MediaPageUrl);
+                request.Headers.Referrer = this.mediaPageUri;
 
                 using var response = await http.SendAsync(request, cancellationToken)
                     .ConfigureAwait(false);

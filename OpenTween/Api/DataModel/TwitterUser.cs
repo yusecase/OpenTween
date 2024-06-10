@@ -70,9 +70,6 @@ namespace OpenTween.Api.DataModel
         [DataMember(Name = "friends_count")]
         public int FriendsCount { get; set; }
 
-        [DataMember(Name = "id")]
-        public long Id { get; set; }
-
         [DataMember(Name = "id_str")]
         public string IdStr { get; set; }
 
@@ -120,7 +117,6 @@ namespace OpenTween.Api.DataModel
         {
             return new()
             {
-                Id = 0L,
                 IdStr = "0",
                 ScreenName = "?????",
                 Name = "Unknown User",

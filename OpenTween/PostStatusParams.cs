@@ -31,18 +31,12 @@ using OpenTween.Models;
 
 namespace OpenTween
 {
-    public class PostStatusParams
+    public record PostStatusParams(
+        string Text,
+        PostClass? InReplyTo = null,
+        IReadOnlyList<long>? MediaIds = null
+    )
     {
-        public string Text { get; set; } = "";
-
-        public PostId? InReplyToStatusId { get; set; }
-
-        public IReadOnlyList<long> MediaIds { get; set; } = Array.Empty<long>();
-
-        public bool AutoPopulateReplyMetadata { get; set; }
-
-        public IReadOnlyList<long> ExcludeReplyUserIds { get; set; } = Array.Empty<long>();
-
-        public string? AttachmentUrl { get; set; }
+        public IReadOnlyList<long> MediaIds { get; init; } = MediaIds ?? Array.Empty<long>();
     }
 }

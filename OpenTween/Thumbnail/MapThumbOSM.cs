@@ -41,12 +41,13 @@ namespace OpenTween.Thumbnail
             var size = new Size(SettingManager.Instance.Common.MapThumbnailWidth, SettingManager.Instance.Common.MapThumbnailHeight);
             var zoom = SettingManager.Instance.Common.MapThumbnailZoom;
 
-            var thumb = new OSMThumbnailInfo(geo.Latitude, geo.Longitude, zoom, size)
+            var mapUrl = this.CreateMapLinkUrl(geo.Latitude, geo.Longitude);
+            var thumb = new ThumbnailInfo(mapUrl, null)
             {
-                MediaPageUrl = this.CreateMapLinkUrl(geo.Latitude, geo.Longitude),
+                Loader = new OSMThumbnailLoader(geo.Latitude, geo.Longitude, zoom, size),
             };
 
-            return Task.FromResult((ThumbnailInfo)thumb);
+            return Task.FromResult(thumb);
         }
 
         public string CreateMapLinkUrl(double latitude, double longitude)
@@ -57,7 +58,7 @@ namespace OpenTween.Thumbnail
         }
     }
 
-    public class OSMThumbnailInfo : ThumbnailInfo
+    public class OSMThumbnailLoader : IThumbnailLoader
     {
         /// <summary>openstreetmap.org タイルサーバー</summary>
         public static readonly string TileServerBase = "https://a.tile.openstreetmap.org";
@@ -77,7 +78,7 @@ namespace OpenTween.Thumbnail
         /// <summary>生成するサムネイル画像のサイズ (ピクセル単位)</summary>
         public Size ThumbnailSize { get; }
 
-        public OSMThumbnailInfo(double latitude, double longitude, int zoom, Size thumbSize)
+        public OSMThumbnailLoader(double latitude, double longitude, int zoom, Size thumbSize)
         {
             this.Latitude = latitude;
             this.Longitude = longitude;
@@ -85,7 +86,7 @@ namespace OpenTween.Thumbnail
             this.ThumbnailSize = thumbSize;
         }
 
-        public override async Task<MemoryImage> LoadThumbnailImageAsync(HttpClient http, CancellationToken cancellationToken)
+        public async Task<MemoryImage> Load(HttpClient http, CancellationToken cancellationToken)
         {
             // 画像中央に描画されるタイル (ピクセル単位ではなくタイル番号を表す)
             // タイル番号に小数部が含まれているが、これはタイル内の相対的な位置を表すためこのまま保持する

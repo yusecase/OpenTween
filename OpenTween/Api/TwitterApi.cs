@@ -37,29 +37,19 @@ namespace OpenTween.Api
 {
     public sealed class TwitterApi : IDisposable
     {
-        public long CurrentUserId { get; private set; }
-
-        public string CurrentScreenName { get; private set; } = "";
-
         public IApiConnection Connection => this.ApiConnection;
 
         internal IApiConnection ApiConnection;
 
-        public APIAuthType AuthType { get; private set; } = APIAuthType.None;
+        public APIAuthType AuthType
+            => ((TwitterApiConnection)this.ApiConnection).Credential.AuthType;
 
         public TwitterApi()
-            => this.ApiConnection = new TwitterApiConnection(new TwitterCredentialNone());
+            => this.ApiConnection = new TwitterApiConnection();
 
-        public void Initialize(ITwitterCredential credential, long userId, string screenName)
+        public void Initialize(IApiConnection apiConnection)
         {
-            this.AuthType = credential.AuthType;
-
-            var newInstance = new TwitterApiConnection(credential);
-            var oldInstance = Interlocked.Exchange(ref this.ApiConnection, newInstance);
-            oldInstance?.Dispose();
-
-            this.CurrentUserId = userId;
-            this.CurrentScreenName = screenName;
+            this.ApiConnection = apiConnection;
         }
 
         public async Task<TwitterStatus[]> StatusesHomeTimeline(int? count = null, TwitterStatusId? maxId = null, TwitterStatusId? sinceId = null)
@@ -203,7 +193,7 @@ namespace OpenTween.Api
             TwitterStatusId? replyToId,
             IReadOnlyList<long>? mediaIds,
             bool? autoPopulateReplyMetadata = null,
-            IReadOnlyList<long>? excludeReplyUserIds = null,
+            IReadOnlyList<TwitterUserId>? excludeReplyUserIds = null,
             string? attachmentUrl = null)
         {
             var param = new Dictionary<string, string>
@@ -259,6 +249,26 @@ namespace OpenTween.Api
             var request = new PostRequest
             {
                 RequestUri = new("statuses/retweet.json", UriKind.Relative),
+                Query = new Dictionary<string, string>
+                {
+                    ["id"] = statusId.Id,
+                    ["include_entities"] = "true",
+                    ["include_ext_alt_text"] = "true",
+                    ["tweet_mode"] = "extended",
+                },
+            };
+
+            using var response = await this.Connection.SendAsync(request)
+                .ConfigureAwait(false);
+
+            return response.ReadAsLazyJson<TwitterStatus>();
+        }
+
+        public async Task<LazyJson<TwitterStatus>> StatusesUnretweet(TwitterStatusId statusId)
+        {
+            var request = new PostRequest
+            {
+                RequestUri = new("statuses/unretweet.json", UriKind.Relative),
                 Query = new Dictionary<string, string>
                 {
                     ["id"] = statusId.Id,
@@ -603,7 +613,7 @@ namespace OpenTween.Api
                 .ConfigureAwait(false);
         }
 
-        public async Task<LazyJson<TwitterMessageEventSingle>> DirectMessagesEventsNew(long recipientId, string text, long? mediaId = null)
+        public async Task<LazyJson<TwitterMessageEventSingle>> DirectMessagesEventsNew(TwitterUserId recipientId, string text, long? mediaId = null)
         {
             var attachment = "";
             if (mediaId != null)
@@ -624,7 +634,7 @@ namespace OpenTween.Api
                     "type": "message_create",
                     "message_create": {
                       "target": {
-                        "recipient_id": "{{JsonUtils.EscapeJsonString(recipientId.ToString())}}"
+                        "recipient_id": "{{JsonUtils.EscapeJsonString(recipientId.Id)}}"
                       },
                       "message_data": {
                         "text": "{{JsonUtils.EscapeJsonString(text)}}"{{attachment}}
@@ -684,14 +694,14 @@ namespace OpenTween.Api
                 .ConfigureAwait(false);
         }
 
-        public async Task<TwitterUser[]> UsersLookup(IReadOnlyList<string> userIds)
+        public async Task<TwitterUser[]> UsersLookup(IReadOnlyList<TwitterUserId> userIds)
         {
             var request = new GetRequest
             {
                 RequestUri = new("users/lookup.json", UriKind.Relative),
                 Query = new Dictionary<string, string>
                 {
-                    ["user_id"] = string.Join(",", userIds),
+                    ["user_id"] = string.Join(",", userIds.Select(x => x.Id)),
                     ["include_entities"] = "true",
                     ["include_ext_alt_text"] = "true",
                     ["tweet_mode"] = "extended",
@@ -724,7 +734,7 @@ namespace OpenTween.Api
             return response.ReadAsLazyJson<TwitterUser>();
         }
 
-        public async Task<TwitterStatus[]> FavoritesList(int? count = null, long? maxId = null, long? sinceId = null)
+        public async Task<TwitterStatus[]> FavoritesList(int? count = null, TwitterStatusId? maxId = null, TwitterStatusId? sinceId = null)
         {
             var param = new Dictionary<string, string>
             {
@@ -736,9 +746,9 @@ namespace OpenTween.Api
             if (count != null)
                 param["count"] = count.ToString();
             if (maxId != null)
-                param["max_id"] = maxId.ToString();
+                param["max_id"] = maxId.Id;
             if (sinceId != null)
-                param["since_id"] = sinceId.ToString();
+                param["since_id"] = sinceId.Id;
 
             var request = new GetRequest
             {
@@ -844,7 +854,7 @@ namespace OpenTween.Api
             return response.ReadAsLazyJson<TwitterFriendship>();
         }
 
-        public async Task<long[]> NoRetweetIds()
+        public async Task<TwitterUserId[]> NoRetweetIds()
         {
             var request = new GetRequest
             {
@@ -855,8 +865,10 @@ namespace OpenTween.Api
             using var response = await this.Connection.SendAsync(request)
                 .ConfigureAwait(false);
 
-            return await response.ReadAsJson<long[]>()
+            var idsStr = await response.ReadAsJson<string[]>()
                 .ConfigureAwait(false);
+
+            return idsStr.Select(x => new TwitterUserId(x)).ToArray();
         }
 
         public async Task<TwitterIds> FollowersIds(long? cursor = null)
@@ -977,9 +989,6 @@ namespace OpenTween.Api
 
             var user = await response.ReadAsJson<TwitterUser>()
                 .ConfigureAwait(false);
-
-            this.CurrentUserId = user.Id;
-            this.CurrentScreenName = user.ScreenName;
 
             return user;
         }

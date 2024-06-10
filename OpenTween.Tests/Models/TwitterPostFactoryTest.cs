@@ -28,7 +28,7 @@ namespace OpenTween.Models
 {
     public class TwitterPostFactoryTest
     {
-        private static readonly ISet<long> EmptyIdSet = new HashSet<long>();
+        private static readonly ISet<PersonId> EmptyIdSet = new HashSet<PersonId>();
 
         private readonly Random random = new();
 
@@ -45,7 +45,6 @@ namespace OpenTween.Models
 
             return new()
             {
-                Id = statusId,
                 IdStr = statusId.ToString(),
                 CreatedAt = "Sat Jan 01 00:00:00 +0000 2022",
                 FullText = "hoge",
@@ -61,7 +60,6 @@ namespace OpenTween.Models
 
             return new()
             {
-                Id = userId,
                 IdStr = userId.ToString(),
                 ScreenName = "tetete",
                 Name = "ててて",
@@ -72,11 +70,12 @@ namespace OpenTween.Models
         [Fact]
         public void CreateFromStatus_Test()
         {
-            var factory = new TwitterPostFactory(this.CreateTabinfo());
+            var factory = new TwitterPostFactory(this.CreateTabinfo(), new());
             var status = this.CreateStatus();
-            var post = factory.CreateFromStatus(status, selfUserId: 20000L, followerIds: EmptyIdSet);
+            var post = factory.CreateFromStatus(status, selfUserId: new("20000"), followerIds: EmptyIdSet, firstLoad: false);
 
             Assert.Equal(new TwitterStatusId(status.IdStr), post.StatusId);
+            Assert.Equal(new($"https://twitter.com/tetete/status/{status.IdStr}"), post.PostUri);
             Assert.Equal(new DateTimeUtc(2022, 1, 1, 0, 0, 0), post.CreatedAt);
             Assert.Equal("hoge", post.Text);
             Assert.Equal("hoge", post.TextFromApi);
@@ -107,22 +106,24 @@ namespace OpenTween.Models
             Assert.Null(post.RetweetedBy);
             Assert.Null(post.RetweetedByUserId);
 
-            Assert.Equal(status.User.Id, post.UserId);
+            Assert.Equal(new TwitterUserId(status.User.IdStr), post.UserId);
             Assert.Equal("tetete", post.ScreenName);
             Assert.Equal("ててて", post.Nickname);
             Assert.Equal("https://example.com/profile.png", post.ImageUrl);
             Assert.False(post.IsProtect);
             Assert.False(post.IsOwl);
             Assert.False(post.IsMe);
+
+            Assert.False(post.IsRead);
         }
 
         [Fact]
         public void CreateFromStatus_AuthorTest()
         {
-            var factory = new TwitterPostFactory(this.CreateTabinfo());
+            var factory = new TwitterPostFactory(this.CreateTabinfo(), new());
             var status = this.CreateStatus();
-            var selfUserId = status.User.Id;
-            var post = factory.CreateFromStatus(status, selfUserId, followerIds: EmptyIdSet);
+            var selfUserId = new TwitterUserId(status.User.IdStr);
+            var post = factory.CreateFromStatus(status, selfUserId, followerIds: EmptyIdSet, firstLoad: false);
 
             Assert.True(post.IsMe);
         }
@@ -130,10 +131,10 @@ namespace OpenTween.Models
         [Fact]
         public void CreateFromStatus_FollowerTest()
         {
-            var factory = new TwitterPostFactory(this.CreateTabinfo());
+            var factory = new TwitterPostFactory(this.CreateTabinfo(), new());
             var status = this.CreateStatus();
-            var followerIds = new HashSet<long> { status.User.Id };
-            var post = factory.CreateFromStatus(status, selfUserId: 20000L, followerIds);
+            var followerIds = new HashSet<PersonId> { new TwitterUserId(status.User.IdStr) };
+            var post = factory.CreateFromStatus(status, selfUserId: new("20000"), followerIds, firstLoad: false);
 
             Assert.False(post.IsOwl);
         }
@@ -141,10 +142,10 @@ namespace OpenTween.Models
         [Fact]
         public void CreateFromStatus_NotFollowerTest()
         {
-            var factory = new TwitterPostFactory(this.CreateTabinfo());
+            var factory = new TwitterPostFactory(this.CreateTabinfo(), new());
             var status = this.CreateStatus();
-            var followerIds = new HashSet<long> { 30000L };
-            var post = factory.CreateFromStatus(status, selfUserId: 20000L, followerIds);
+            var followerIds = new HashSet<PersonId> { new TwitterUserId("30000") };
+            var post = factory.CreateFromStatus(status, selfUserId: new("20000"), followerIds, firstLoad: false);
 
             Assert.True(post.IsOwl);
         }
@@ -152,22 +153,84 @@ namespace OpenTween.Models
         [Fact]
         public void CreateFromStatus_RetweetTest()
         {
-            var factory = new TwitterPostFactory(this.CreateTabinfo());
+            var factory = new TwitterPostFactory(this.CreateTabinfo(), new());
             var originalStatus = this.CreateStatus();
 
             var retweetStatus = this.CreateStatus();
             retweetStatus.RetweetedStatus = originalStatus;
             retweetStatus.Source = """<a href="https://mobile.twitter.com" rel="nofollow">Twitter Web App</a>""";
 
-            var post = factory.CreateFromStatus(retweetStatus, selfUserId: 20000L, followerIds: EmptyIdSet);
+            var post = factory.CreateFromStatus(retweetStatus, selfUserId: new("20000"), followerIds: EmptyIdSet, firstLoad: false);
 
             Assert.Equal(new TwitterStatusId(retweetStatus.IdStr), post.StatusId);
-            Assert.Equal(retweetStatus.User.Id, post.RetweetedByUserId);
+            Assert.Equal(new TwitterUserId(retweetStatus.User.IdStr), post.RetweetedByUserId);
             Assert.Equal(new TwitterStatusId(originalStatus.IdStr), post.RetweetedId);
-            Assert.Equal(originalStatus.User.Id, post.UserId);
+            Assert.Equal(new TwitterUserId(originalStatus.User.IdStr), post.UserId);
 
             Assert.Equal("OpenTween", post.Source);
             Assert.Equal("https://www.opentween.org/", post.SourceUri?.OriginalString);
+        }
+
+        [Fact]
+        public void CreateFromStatus_FirstLoadNotUnreadTest()
+        {
+            var settingCommon = new SettingCommon
+            {
+                Read = true, // 起動時の読み込み分を既読扱いにする
+            };
+
+            var factory = new TwitterPostFactory(this.CreateTabinfo(), settingCommon);
+            var status = this.CreateStatus();
+            var post = factory.CreateFromStatus(status, selfUserId: new("20000"), followerIds: EmptyIdSet, firstLoad: true);
+
+            Assert.True(post.IsRead); // 既読
+        }
+
+        [Fact]
+        public void CreateFromStatus_FirstLoadUnreadTest()
+        {
+            var settingCommon = new SettingCommon
+            {
+                Read = false, // 起動時の読み込み分を既読扱いにしない
+            };
+
+            var factory = new TwitterPostFactory(this.CreateTabinfo(), settingCommon);
+            var status = this.CreateStatus();
+            var post = factory.CreateFromStatus(status, selfUserId: new("20000"), followerIds: EmptyIdSet, firstLoad: true);
+
+            Assert.False(post.IsRead); // 未読
+        }
+
+        [Fact]
+        public void CreateFromStatus_SelfPostUnreadTest()
+        {
+            var settingCommon = new SettingCommon
+            {
+                ReadOwnPost = false, // 自分自身の発言を既読扱いにしない
+            };
+
+            var factory = new TwitterPostFactory(this.CreateTabinfo(), settingCommon);
+            var status = this.CreateStatus();
+            status.User.IdStr = "20000";
+            var post = factory.CreateFromStatus(status, selfUserId: new("20000"), followerIds: EmptyIdSet, firstLoad: false);
+
+            Assert.False(post.IsRead); // 未読
+        }
+
+        [Fact]
+        public void CreateFromStatus_SelfPostNotUnreadTest()
+        {
+            var settingCommon = new SettingCommon
+            {
+                ReadOwnPost = true, // 自分自身の発言を既読扱いにする
+            };
+
+            var factory = new TwitterPostFactory(this.CreateTabinfo(), settingCommon);
+            var status = this.CreateStatus();
+            status.User.IdStr = "20000";
+            var post = factory.CreateFromStatus(status, selfUserId: new("20000"), followerIds: EmptyIdSet, firstLoad: false);
+
+            Assert.True(post.IsRead); // 既読
         }
 
         private TwitterMessageEvent CreateDirectMessage(string senderId, string recipientId)
@@ -212,20 +275,21 @@ namespace OpenTween.Models
         [Fact]
         public void CreateFromDirectMessageEvent_Test()
         {
-            var factory = new TwitterPostFactory(this.CreateTabinfo());
+            var factory = new TwitterPostFactory(this.CreateTabinfo(), new());
 
             var selfUser = this.CreateUser();
             var otherUser = this.CreateUser();
             var eventItem = this.CreateDirectMessage(senderId: otherUser.IdStr, recipientId: selfUser.IdStr);
-            var users = new Dictionary<string, TwitterUser>()
+            var users = new Dictionary<TwitterUserId, TwitterUser>()
             {
-                [selfUser.IdStr] = selfUser,
-                [otherUser.IdStr] = otherUser,
+                [new(selfUser.IdStr)] = selfUser,
+                [new(otherUser.IdStr)] = otherUser,
             };
             var apps = this.CreateApps();
-            var post = factory.CreateFromDirectMessageEvent(eventItem, users, apps, selfUserId: selfUser.Id);
+            var post = factory.CreateFromDirectMessageEvent(eventItem, users, apps, selfUserId: new(selfUser.IdStr), firstLoad: false);
 
             Assert.Equal(new TwitterDirectMessageId(eventItem.Id), post.StatusId);
+            Assert.Null(post.PostUri);
             Assert.Equal(new DateTimeUtc(2022, 1, 1, 0, 0, 0), post.CreatedAt);
             Assert.Equal("hoge", post.Text);
             Assert.Equal("hoge", post.TextFromApi);
@@ -256,32 +320,34 @@ namespace OpenTween.Models
             Assert.Null(post.RetweetedBy);
             Assert.Null(post.RetweetedByUserId);
 
-            Assert.Equal(otherUser.Id, post.UserId);
+            Assert.Equal(new TwitterUserId(otherUser.IdStr), post.UserId);
             Assert.Equal("tetete", post.ScreenName);
             Assert.Equal("ててて", post.Nickname);
             Assert.Equal("https://example.com/profile.png", post.ImageUrl);
             Assert.False(post.IsProtect);
             Assert.True(post.IsOwl);
             Assert.False(post.IsMe);
+
+            Assert.False(post.IsRead);
         }
 
         [Fact]
         public void CreateFromDirectMessageEvent_SenderTest()
         {
-            var factory = new TwitterPostFactory(this.CreateTabinfo());
+            var factory = new TwitterPostFactory(this.CreateTabinfo(), new());
 
             var selfUser = this.CreateUser();
             var otherUser = this.CreateUser();
             var eventItem = this.CreateDirectMessage(senderId: selfUser.IdStr, recipientId: otherUser.IdStr);
-            var users = new Dictionary<string, TwitterUser>()
+            var users = new Dictionary<TwitterUserId, TwitterUser>()
             {
-                [selfUser.IdStr] = selfUser,
-                [otherUser.IdStr] = otherUser,
+                [new(selfUser.IdStr)] = selfUser,
+                [new(otherUser.IdStr)] = otherUser,
             };
             var apps = this.CreateApps();
-            var post = factory.CreateFromDirectMessageEvent(eventItem, users, apps, selfUserId: selfUser.Id);
+            var post = factory.CreateFromDirectMessageEvent(eventItem, users, apps, selfUserId: new(selfUser.IdStr), firstLoad: false);
 
-            Assert.Equal(otherUser.Id, post.UserId);
+            Assert.Equal(new TwitterUserId(otherUser.IdStr), post.UserId);
             Assert.False(post.IsOwl);
             Assert.True(post.IsMe);
         }
@@ -289,7 +355,7 @@ namespace OpenTween.Models
         [Fact]
         public void GetReceivedHashtags_Test()
         {
-            var factory = new TwitterPostFactory(this.CreateTabinfo());
+            var factory = new TwitterPostFactory(this.CreateTabinfo(), new());
             var status = this.CreateStatus();
             status.FullText = "hoge #OpenTween";
             status.Entities.Hashtags = new[]
@@ -301,7 +367,7 @@ namespace OpenTween.Models
                 },
             };
 
-            _ = factory.CreateFromStatus(status, selfUserId: 20000L, followerIds: EmptyIdSet);
+            _ = factory.CreateFromStatus(status, selfUserId: new("20000"), followerIds: EmptyIdSet, firstLoad: false);
 
             Assert.Equal(new[] { "#OpenTween" }, factory.GetReceivedHashtags());
             Assert.Empty(factory.GetReceivedHashtags());
@@ -310,7 +376,7 @@ namespace OpenTween.Models
         [Fact]
         public void CreateFromStatus_MediaAltTest()
         {
-            var factory = new TwitterPostFactory(this.CreateTabinfo());
+            var factory = new TwitterPostFactory(this.CreateTabinfo(), new());
 
             var status = this.CreateStatus();
             status.FullText = "https://t.co/hoge";
@@ -329,7 +395,7 @@ namespace OpenTween.Models
                 },
             };
 
-            var post = factory.CreateFromStatus(status, selfUserId: 100L, followerIds: EmptyIdSet);
+            var post = factory.CreateFromStatus(status, selfUserId: new("100"), followerIds: EmptyIdSet, firstLoad: false);
 
             var accessibleText = string.Format(Properties.Resources.ImageAltText, "代替テキスト");
             Assert.Equal(accessibleText, post.AccessibleText);
@@ -341,7 +407,7 @@ namespace OpenTween.Models
         [Fact]
         public void CreateFromStatus_MediaNoAltTest()
         {
-            var factory = new TwitterPostFactory(this.CreateTabinfo());
+            var factory = new TwitterPostFactory(this.CreateTabinfo(), new());
 
             var status = this.CreateStatus();
             status.FullText = "https://t.co/hoge";
@@ -360,7 +426,7 @@ namespace OpenTween.Models
                 },
             };
 
-            var post = factory.CreateFromStatus(status, selfUserId: 100L, followerIds: EmptyIdSet);
+            var post = factory.CreateFromStatus(status, selfUserId: new("100"), followerIds: EmptyIdSet, firstLoad: false);
 
             Assert.Equal("pic.twitter.com/hoge", post.AccessibleText);
             Assert.Equal("""<a href="https://t.co/hoge" title="https://twitter.com/hoge/status/1234567890/photo/1">pic.twitter.com/hoge</a>""", post.Text);
@@ -371,7 +437,7 @@ namespace OpenTween.Models
         [Fact]
         public void CreateFromStatus_QuotedUrlTest()
         {
-            var factory = new TwitterPostFactory(this.CreateTabinfo());
+            var factory = new TwitterPostFactory(this.CreateTabinfo(), new());
 
             var status = this.CreateStatus();
             status.FullText = "https://t.co/hoge";
@@ -390,18 +456,16 @@ namespace OpenTween.Models
             };
             status.QuotedStatus = new()
             {
-                Id = 1234567890L,
                 IdStr = "1234567890",
                 User = new()
                 {
-                    Id = 1111,
                     IdStr = "1111",
                     ScreenName = "foo",
                 },
                 FullText = "test",
             };
 
-            var post = factory.CreateFromStatus(status, selfUserId: 100L, followerIds: EmptyIdSet);
+            var post = factory.CreateFromStatus(status, selfUserId: new("100"), followerIds: EmptyIdSet, firstLoad: false);
 
             var accessibleText = string.Format(Properties.Resources.QuoteStatus_AccessibleText, "foo", "test");
             Assert.Equal(accessibleText, post.AccessibleText);
@@ -413,17 +477,15 @@ namespace OpenTween.Models
         [Fact]
         public void CreateFromStatus_QuotedUrlWithPermelinkTest()
         {
-            var factory = new TwitterPostFactory(this.CreateTabinfo());
+            var factory = new TwitterPostFactory(this.CreateTabinfo(), new());
 
             var status = this.CreateStatus();
             status.FullText = "hoge";
             status.QuotedStatus = new()
             {
-                Id = 1234567890L,
                 IdStr = "1234567890",
                 User = new TwitterUser
                 {
-                    Id = 1111,
                     IdStr = "1111",
                     ScreenName = "foo",
                 },
@@ -436,7 +498,7 @@ namespace OpenTween.Models
                 Expanded = "https://twitter.com/hoge/status/1234567890",
             };
 
-            var post = factory.CreateFromStatus(status, selfUserId: 100L, followerIds: EmptyIdSet);
+            var post = factory.CreateFromStatus(status, selfUserId: new("100"), followerIds: EmptyIdSet, firstLoad: false);
 
             var accessibleText = "hoge " + string.Format(Properties.Resources.QuoteStatus_AccessibleText, "foo", "test");
             Assert.Equal(accessibleText, post.AccessibleText);
@@ -448,7 +510,7 @@ namespace OpenTween.Models
         [Fact]
         public void CreateFromStatus_QuotedUrlNoReferenceTest()
         {
-            var factory = new TwitterPostFactory(this.CreateTabinfo());
+            var factory = new TwitterPostFactory(this.CreateTabinfo(), new());
 
             var status = this.CreateStatus();
             status.FullText = "https://t.co/hoge";
@@ -467,7 +529,7 @@ namespace OpenTween.Models
             };
             status.QuotedStatus = null;
 
-            var post = factory.CreateFromStatus(status, selfUserId: 100L, followerIds: EmptyIdSet);
+            var post = factory.CreateFromStatus(status, selfUserId: new("100"), followerIds: EmptyIdSet, firstLoad: false);
 
             var accessibleText = "twitter.com/hoge/status/1…";
             Assert.Equal(accessibleText, post.AccessibleText);
@@ -648,7 +710,7 @@ namespace OpenTween.Models
         [Fact]
         public void ParseDateTimeFromSnowflakeId_LowerTest()
         {
-            var statusId = 1659990873340346368L;
+            var statusId = new TwitterStatusId("1659990873340346368");
             var createdAtStr = "Sat May 20 18:34:00 +0000 2023";
             var expected = new DateTimeUtc(2023, 5, 20, 18, 34, 0, 0);
             Assert.Equal(expected, TwitterPostFactory.ParseDateTimeFromSnowflakeId(statusId, createdAtStr));
@@ -657,7 +719,7 @@ namespace OpenTween.Models
         [Fact]
         public void ParseDateTimeFromSnowflakeId_UpperTest()
         {
-            var statusId = 1672312060766748673L;
+            var statusId = new TwitterStatusId("1672312060766748673");
             var createdAtStr = "Fri Jun 23 18:33:59 +0000 2023";
             var expected = new DateTimeUtc(2023, 6, 23, 18, 33, 59, 999);
             Assert.Equal(expected, TwitterPostFactory.ParseDateTimeFromSnowflakeId(statusId, createdAtStr));
@@ -667,9 +729,19 @@ namespace OpenTween.Models
         public void ParseDateTimeFromSnowflakeId_FallbackTest()
         {
             // Snowflake 導入以前の status_id に対しては created_at の文字列からパースした日時を採用する
-            var statusId = 20L;
+            var statusId = new TwitterStatusId("20");
             var createdAtStr = "Tue Mar 21 20:50:14 +0000 2006";
             var expected = new DateTimeUtc(2006, 3, 21, 20, 50, 14, 0);
+            Assert.Equal(expected, TwitterPostFactory.ParseDateTimeFromSnowflakeId(statusId, createdAtStr));
+        }
+
+        [Fact]
+        public void ParseDateTimeFromSnowflakeId_FallbackNotNumericTest()
+        {
+            // id_str が long 型に変換できない形式だった場合は created_at からパースした日時を採用する
+            var statusId = new TwitterStatusId("abcdef");
+            var createdAtStr = "Mon Jan 01 00:00:00 +0000 2024";
+            var expected = new DateTimeUtc(2024, 1, 1, 0, 0, 0, 0);
             Assert.Equal(expected, TwitterPostFactory.ParseDateTimeFromSnowflakeId(statusId, createdAtStr));
         }
 

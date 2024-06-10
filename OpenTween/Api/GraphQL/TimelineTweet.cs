@@ -40,7 +40,7 @@ namespace OpenTween.Api.GraphQL
         public XElement Element { get; }
 
         public bool IsAvailable
-            => this.resultElm != null && !this.IsTombstoneResult(this.resultElm);
+            => this.resultElm != null && !this.IsTombstoneResult(this.resultElm) && this.HasLegacyProperty(this.resultElm);
 
         private readonly XElement? resultElm;
 
@@ -59,6 +59,9 @@ namespace OpenTween.Api.GraphQL
 
         private bool IsTombstoneResult([NotNullWhen(true)]XElement? resultElm)
             => resultElm?.Element("__typename")?.Value == "TweetTombstone";
+
+        private bool HasLegacyProperty(XElement? resultElm)
+            => resultElm?.XPathSelectElement("legacy|tweet/legacy") != null;
 
         public TwitterStatus ToTwitterStatus()
         {
@@ -136,7 +139,7 @@ namespace OpenTween.Api.GraphQL
                 FullText = GetText(tweetLegacyElm, "full_text"),
                 InReplyToScreenName = GetTextOrNull(tweetLegacyElm, "in_reply_to_screen_name"),
                 InReplyToStatusIdStr = GetTextOrNull(tweetLegacyElm, "in_reply_to_status_id_str"),
-                InReplyToUserId = GetTextOrNull(tweetLegacyElm, "in_reply_to_user_id_str") is string userId ? long.Parse(userId) : null,
+                InReplyToUserIdStr = GetTextOrNull(tweetLegacyElm, "in_reply_to_user_id_str"),
                 Favorited = GetTextOrNull(tweetLegacyElm, "favorited") is string favorited ? favorited == "true" : null,
                 Entities = new()
                 {
@@ -144,6 +147,7 @@ namespace OpenTween.Api.GraphQL
                         .Select(x => new TwitterEntityMention()
                         {
                             Indices = x.XPathSelectElements("indices/item").Select(x => int.Parse(x.Value)).ToArray(),
+                            IdStr = GetText(x, "id_str"),
                             ScreenName = GetText(x, "screen_name"),
                         })
                         .ToArray(),

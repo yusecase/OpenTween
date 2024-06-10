@@ -152,6 +152,9 @@ namespace OpenTween
                 {
                     throw;
                 }
+                catch (WebApiException)
+                {
+                }
                 catch (HttpRequestException)
                 {
                 }

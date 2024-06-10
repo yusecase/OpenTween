@@ -33,6 +33,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using OpenTween.SocialProtocol;
 
 namespace OpenTween.Models
 {
@@ -54,9 +55,6 @@ namespace OpenTween.Models
         // フィルタに合致したら追加
         public MyCommon.HITRESULT AddFiltered(PostClass post, bool immediately = false)
         {
-            if (this.IsInnerStorageTabType)
-                return MyCommon.HITRESULT.None;
-
             var rslt = MyCommon.HITRESULT.None;
 
             // 全フィルタ評価（優先順位あり）
@@ -171,11 +169,11 @@ namespace OpenTween.Models
             }
         }
 
-        public override Task RefreshAsync(Twitter tw, bool backward, bool startup, IProgress<string> progress)
+        public override Task RefreshAsync(ISocialAccount account, bool backward, IProgress<string> progress)
         {
             var homeTab = TabInformations.GetInstance().HomeTab;
 
-            return homeTab.RefreshAsync(tw, backward, startup, progress);
+            return homeTab.RefreshAsync(account, backward, progress);
         }
     }
 }

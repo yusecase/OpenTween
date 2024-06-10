@@ -58,6 +58,8 @@ namespace OpenTween.MediaUploadServices
 
         public bool CanUseAltText => true;
 
+        public bool IsNativeUploadService => true;
+
         public bool CheckFileExtension(string fileExtension)
             => this.pictureExt.Contains(fileExtension, StringComparer.InvariantCultureIgnoreCase);
 
@@ -94,9 +96,7 @@ namespace OpenTween.MediaUploadServices
             else
                 mediaIds = await this.UploadMediaForTweet(mediaItems).ConfigureAwait(false);
 
-            postParams.MediaIds = mediaIds;
-
-            return postParams;
+            return postParams with { MediaIds = mediaIds };
         }
 
         // pic.twitter.com の URL は文字数にカウントされない

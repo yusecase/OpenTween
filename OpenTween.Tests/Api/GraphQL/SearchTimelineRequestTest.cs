@@ -56,8 +56,8 @@ namespace OpenTween.Api.GraphQL
 
             var response = await request.Send(mock.Object);
             Assert.Single(response.Tweets);
-            Assert.Equal("DAADDAABCgABFnlh4hraMAYKAAIOTm0DEhTAAQAIAAIAAAABCAADAAAAAAgABAAAAAAKAAUX8j3ezIAnEAoABhfyPd7Mf9jwAAA", response.CursorTop);
-            Assert.Equal("DAADDAABCgABFnlh4hraMAYKAAIOTm0DEhTAAQAIAAIAAAACCAADAAAAAAgABAAAAAAKAAUX8j3ezIAnEAoABhfyPd7Mf9jwAAA", response.CursorBottom);
+            Assert.Equal("DAADDAABCgABFnlh4hraMAYKAAIOTm0DEhTAAQAIAAIAAAABCAADAAAAAAgABAAAAAAKAAUX8j3ezIAnEAoABhfyPd7Mf9jwAAA", response.CursorTop?.Value.Value);
+            Assert.Equal("DAADDAABCgABFnlh4hraMAYKAAIOTm0DEhTAAQAIAAIAAAACCAADAAAAAAgABAAAAAAKAAUX8j3ezIAnEAoABhfyPd7Mf9jwAAA", response.CursorBottom?.Value.Value);
 
             mock.VerifyAll();
         }
@@ -78,8 +78,8 @@ namespace OpenTween.Api.GraphQL
 
             var response = await request.Send(mock.Object);
             Assert.Empty(response.Tweets);
-            Assert.Equal("DAADDAABCgABFnlh4hraMAYKAAIOTm0DEhTAAQAIAAIAAAABCAADAAAAAQgABAAAAAAKAAUX8j3ezIBOIAoABhfyPd7Mf9jwAAA", response.CursorTop);
-            Assert.Equal("DAADDAABCgABFnlh4hraMAYKAAIOTm0DEhTAAQAIAAIAAAACCAADAAAAAQgABAAAAAAKAAUX8j3ezIBOIAoABhfyPd7Mf9jwAAA", response.CursorBottom);
+            Assert.Equal("DAADDAABCgABFnlh4hraMAYKAAIOTm0DEhTAAQAIAAIAAAABCAADAAAAAQgABAAAAAAKAAUX8j3ezIBOIAoABhfyPd7Mf9jwAAA", response.CursorTop?.Value.Value);
+            Assert.Equal("DAADDAABCgABFnlh4hraMAYKAAIOTm0DEhTAAQAIAAIAAAACCAADAAAAAQgABAAAAAAKAAUX8j3ezIBOIAoABhfyPd7Mf9jwAAA", response.CursorBottom?.Value.Value);
 
             mock.VerifyAll();
         }
@@ -108,7 +108,7 @@ namespace OpenTween.Api.GraphQL
             var request = new SearchTimelineRequest(rawQuery: "#OpenTween")
             {
                 Count = 20,
-                Cursor = "aaa",
+                Cursor = new("aaa"),
             };
 
             await request.Send(mock.Object);

@@ -181,5 +181,8 @@ namespace OpenTween
             result = MinValue;
             return false;
         }
+
+        public static DateTimeUtc ParseISO(string input)
+            => new(DateTimeOffset.Parse(input, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal));
     }
 }

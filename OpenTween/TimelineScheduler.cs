@@ -105,26 +105,9 @@ namespace OpenTween
                 return; // TimerCallback 内で更新されるのでここは単に無視してよい
 
             if (this.Enabled)
-            {
-                var delay = this.NextTimerDelay();
-
-                // タイマーの待機時間が 1 時間を超える値になった場合は異常値として強制的にリセットする
-                // （タイムライン更新が停止する不具合が報告される件への暫定的な対処）
-                if (delay >= TimeSpan.FromHours(1))
-                {
-                    MyCommon.ExceptionOut(new Exception("タイムライン更新の待機時間が異常値のためリセットします: " + delay));
-                    foreach (var key in this.LastUpdatedAt.Keys)
-                        this.LastUpdatedAt[key] = DateTimeUtc.MinValue;
-
-                    delay = TimeSpan.FromSeconds(10);
-                }
-
-                this.timer.Change(delay, Timeout.InfiniteTimeSpan);
-            }
+                this.timer.Change(this.NextTimerDelay(), Timeout.InfiniteTimeSpan);
             else
-            {
                 this.timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
-            }
         }
 
         public void SystemResumed()
@@ -152,22 +135,12 @@ namespace OpenTween
             {
                 this.preventTimerUpdate = true;
 
-                var (taskTypes, updateTasks) = this.systemResumeMode
+                var updateTasks = this.systemResumeMode
                     ? this.TimerCallback_AfterSystemResume()
                     : this.TimerCallback_Normal();
 
-                var updateTask = updateTasks.RunAll(runOnThreadPool: true);
-
-                // すべてのコールバック関数の Task が完了してから次のタイマーの待機時間を計算する
-                // ただし、30 秒を超過した場合はエラー報告のダイアログを表示した上で完了を待たずにタイマーを再開する
-                // （タイムライン更新が停止する不具合が報告される件への暫定的な対処）
-                var timeout = Task.Delay(TimeSpan.FromSeconds(30));
-                if (await Task.WhenAny(updateTask, timeout) == timeout)
-                {
-                    var message = "タイムライン更新が規定時間内に完了しませんでした: " +
-                        string.Join(", ", taskTypes);
-                    throw new Exception(message);
-                }
+                await updateTasks.RunAll(runOnThreadPool: true)
+                    .ConfigureAwait(false);
             }
             finally
             {
@@ -176,7 +149,7 @@ namespace OpenTween
             }
         }
 
-        private (TimelineSchedulerTaskType[] TaskTypes, TaskCollection Task) TimerCallback_Normal()
+        private TaskCollection TimerCallback_Normal()
         {
             var now = DateTimeUtc.Now;
             var round = TimeSpan.FromSeconds(1); // 1秒未満の差異であればまとめて実行する
@@ -189,17 +162,16 @@ namespace OpenTween
                     tasks.Add(taskType);
             }
 
-            return (tasks.ToArray(), this.RunUpdateTasks(tasks, now));
+            return this.RunUpdateTasks(tasks, now);
         }
 
-        private (TimelineSchedulerTaskType[] TaskTypes, TaskCollection Task) TimerCallback_AfterSystemResume()
+        private TaskCollection TimerCallback_AfterSystemResume()
         {
             // systemResumeMode では一定期間経過後に全てのタイムラインを更新する
             var now = DateTimeUtc.Now;
 
             this.systemResumeMode = false;
-            var taskTypes = TimelineScheduler.AllTaskTypes;
-            return (taskTypes, this.RunUpdateTasks(taskTypes, now));
+            return this.RunUpdateTasks(TimelineScheduler.AllTaskTypes, now);
         }
 
         private TaskCollection RunUpdateTasks(IEnumerable<TimelineSchedulerTaskType> taskTypes, DateTimeUtc now)

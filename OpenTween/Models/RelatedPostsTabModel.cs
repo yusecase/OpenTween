@@ -28,11 +28,8 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using OpenTween.Setting;
+using OpenTween.SocialProtocol;
 
 namespace OpenTween.Models
 {
@@ -43,39 +40,35 @@ namespace OpenTween.Models
 
         public override bool IsPermanentTabType => false;
 
+        public override AccountKey? SourceAccountKey { get; }
+
         public PostClass TargetPost { get; }
 
-        public RelatedPostsTabModel(string tabName, PostClass targetPost)
+        public RelatedPostsTabModel(string tabName, AccountKey accountKey, PostClass targetPost)
             : base(tabName)
         {
+            this.SourceAccountKey = accountKey;
             this.TargetPost = targetPost;
         }
 
-        public Task RefreshAsync(Twitter tw, bool startup, IProgress<string> progress)
-            => this.RefreshAsync(tw, false, startup, progress);
-
-        public override async Task RefreshAsync(Twitter tw, bool backward, bool startup, IProgress<string> progress)
+        public override async Task RefreshAsync(ISocialAccount account, bool backward, IProgress<string> progress)
         {
-            bool read;
-            if (!SettingManager.Instance.Common.UnreadManage)
-                read = true;
-            else
-                read = startup && SettingManager.Instance.Common.Read;
+            progress.Report("Related refreshing...");
 
-            try
-            {
-                progress.Report("Related refreshing...");
+            var firstLoad = !this.IsFirstLoadCompleted;
 
-                await tw.GetRelatedResult(read, this)
-                    .ConfigureAwait(false);
+            var posts = await account.Client.GetRelatedPosts(this.TargetPost, firstLoad)
+                .ConfigureAwait(false);
 
-                progress.Report("Related refreshed");
-            }
-            finally
-            {
-                // WebException が発生した場合も一部のツイートは読み込めている可能性があるため常に DistoributePosts を呼ぶ
-                TabInformations.GetInstance().DistributePosts();
-            }
+            foreach (var post in posts)
+                this.AddPostQueue(post);
+
+            TabInformations.GetInstance().DistributePosts();
+
+            if (firstLoad)
+                this.IsFirstLoadCompleted = true;
+
+            progress.Report("Related refreshed");
         }
     }
 }

@@ -35,6 +35,7 @@ using System.Web;
 using Moq;
 using OpenTween.Api;
 using OpenTween.Api.DataModel;
+using OpenTween.SocialProtocol.Twitter;
 using Xunit;
 
 namespace OpenTween.Connection
@@ -98,9 +99,10 @@ namespace OpenTween.Connection
         [Fact]
         public async Task SendAsync_UpdateRateLimitTest()
         {
+            var accountState = new TwitterAccountState();
             using var mockHandler = new HttpMessageHandlerMock();
             using var http = new HttpClient(mockHandler);
-            using var apiConnection = new TwitterApiConnection();
+            using var apiConnection = new TwitterApiConnection(new TwitterCredentialNone(), accountState);
             apiConnection.Http = http;
 
             mockHandler.Enqueue(x =>
@@ -116,14 +118,10 @@ namespace OpenTween.Connection
                         { "X-Rate-Limit-Limit", "150" },
                         { "X-Rate-Limit-Remaining", "100" },
                         { "X-Rate-Limit-Reset", "1356998400" },
-                        { "X-Access-Level", "read-write-directmessages" },
                     },
                     Content = new StringContent("\"hogehoge\""),
                 };
             });
-
-            var apiStatus = new TwitterApiStatus();
-            MyCommon.TwitterApiInfo = apiStatus;
 
             var request = new GetRequest
             {
@@ -133,8 +131,7 @@ namespace OpenTween.Connection
 
             using var response = await apiConnection.SendAsync(request);
 
-            Assert.Equal(TwitterApiAccessLevel.ReadWriteAndDirectMessage, apiStatus.AccessLevel);
-            Assert.Equal(new ApiLimit(150, 100, new DateTimeUtc(2013, 1, 1, 0, 0, 0)), apiStatus.AccessLimit["/hoge/tetete"]);
+            Assert.Equal(new(150, 100, new DateTimeUtc(2013, 1, 1, 0, 0, 0)), accountState.RateLimits["/hoge/tetete"]);
 
             Assert.Equal(0, mockHandler.QueueCount);
         }

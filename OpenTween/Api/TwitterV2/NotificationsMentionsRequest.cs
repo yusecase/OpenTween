@@ -35,6 +35,7 @@ using System.Xml.XPath;
 using OpenTween.Api.DataModel;
 using OpenTween.Api.GraphQL;
 using OpenTween.Connection;
+using OpenTween.Models;
 
 namespace OpenTween.Api.TwitterV2
 {
@@ -46,7 +47,7 @@ namespace OpenTween.Api.TwitterV2
 
         public int Count { get; set; } = 100;
 
-        public string? Cursor { get; set; }
+        public TwitterGraphqlCursor? Cursor { get; set; }
 
         public Dictionary<string, string> CreateParameters()
         {
@@ -86,8 +87,8 @@ namespace OpenTween.Api.TwitterV2
                 ["count"] = this.Count.ToString(CultureInfo.InvariantCulture),
             };
 
-            if (!MyCommon.IsNullOrEmpty(this.Cursor))
-                param["cursor"] = this.Cursor;
+            if (this.Cursor != null)
+                param["cursor"] = this.Cursor.Value;
 
             return param;
         }
@@ -151,8 +152,15 @@ namespace OpenTween.Api.TwitterV2
                 statuses.Add(tweet);
             }
 
-            var cursorTop = rootElm.XPathSelectElement("//content/operation/cursor[cursorType[text()='Top']]/value")?.Value;
-            var cursorBottom = rootElm.XPathSelectElement("//content/operation/cursor[cursorType[text()='Bottom']]/value")?.Value;
+            var cursorTopStr = rootElm.XPathSelectElement("//content/operation/cursor[cursorType[text()='Top']]/value")?.Value;
+            var cursorTop = cursorTopStr != null
+                ? new QueryCursor<TwitterGraphqlCursor>(CursorType.Top, new(cursorTopStr))
+                : null;
+
+            var cursorBottomStr = rootElm.XPathSelectElement("//content/operation/cursor[cursorType[text()='Bottom']]/value")?.Value;
+            var cursorBottom = cursorBottomStr != null
+                ? new QueryCursor<TwitterGraphqlCursor>(CursorType.Bottom, new(cursorBottomStr))
+                : null;
 
             return new(statuses.ToArray(), cursorTop, cursorBottom);
         }
@@ -180,8 +188,8 @@ namespace OpenTween.Api.TwitterV2
 
         public readonly record struct NotificationsResponse(
             TwitterStatus[] Statuses,
-            string? CursorTop,
-            string? CursorBottom
+            QueryCursor<TwitterGraphqlCursor>? CursorTop,
+            QueryCursor<TwitterGraphqlCursor>? CursorBottom
         );
     }
 }

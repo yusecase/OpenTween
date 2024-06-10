@@ -35,7 +35,7 @@ namespace OpenTween
             return new()
             {
                 StatusId = new TwitterStatusId(this.random.Next(10000)),
-                UserId = this.random.Next(10000),
+                UserId = new TwitterUserId(this.random.Next(10000).ToString()),
                 ScreenName = "test",
                 Nickname = "てすと",
                 AccessibleText = "foo",

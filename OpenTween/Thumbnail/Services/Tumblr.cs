@@ -117,12 +117,7 @@ namespace OpenTween.Thumbnail.Services
 
             var thumbs =
                 from photoElm in item.XPathSelectElements("photos/item/alt_sizes/item[1]/url")
-                select new ThumbnailInfo
-                {
-                    MediaPageUrl = postUrlElm.Value,
-                    ThumbnailImageUrl = photoElm.Value,
-                    TooltipText = null,
-                };
+                select new ThumbnailInfo(postUrlElm.Value, photoElm.Value);
 
             return thumbs.ToArray();
         }

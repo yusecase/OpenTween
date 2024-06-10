@@ -80,6 +80,8 @@ namespace OpenTween.MediaUploadServices
 
         public bool CanUseAltText => false;
 
+        public bool IsNativeUploadService => false;
+
         public bool CheckFileExtension(string fileExtension)
             => SupportedExtensions.Contains(fileExtension, StringComparer.OrdinalIgnoreCase);
 
@@ -113,9 +115,9 @@ namespace OpenTween.MediaUploadServices
                 var imageUrl = await this.imgurApi.UploadFileAsync(item, postParams.Text)
                     .ConfigureAwait(false);
 
-                postParams.Text += " " + imageUrl;
+                var statusText = postParams.Text + " " + imageUrl;
 
-                return postParams;
+                return postParams with { Text = statusText };
             }
             catch (OperationCanceledException ex)
             {
