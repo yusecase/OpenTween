@@ -33,6 +33,7 @@ using System.Threading.Tasks;
 using OpenTween.Api.DataModel;
 using OpenTween.MediaUploadServices;
 using OpenTween.SocialProtocol;
+using OpenTween.SocialProtocol.Misskey;
 using OpenTween.SocialProtocol.Twitter;
 
 namespace OpenTween
@@ -121,25 +122,26 @@ namespace OpenTween
 
         public void InitializeServices(ISocialAccount account)
         {
+            var mediaServices = new List<KeyValuePair<string, IMediaUploadService>>();
+
             if (account is TwitterAccount twAccount)
             {
                 var twLegacy = twAccount.Legacy;
                 var twConfiguration = twAccount.AccountState.Configuration;
 
-                this.MediaServices = new KeyValuePair<string, IMediaUploadService>[]
+                mediaServices.AddRange(new KeyValuePair<string, IMediaUploadService>[]
                 {
                     new("Twitter", new TwitterPhoto(twLegacy, twConfiguration)),
-                    new("Imgur", new Imgur(twConfiguration)),
                     new("Mobypicture", new Mobypicture(twLegacy, twConfiguration)),
-                };
+                });
             }
-            else
-            {
-                this.MediaServices = new KeyValuePair<string, IMediaUploadService>[]
-                {
-                    new("Imgur", new Imgur(TwitterConfiguration.DefaultConfiguration())),
-                };
-            }
+
+            if (account is MisskeyAccount misskeyAccount)
+                mediaServices.Add(new("Misskey", new MisskeyDrive(misskeyAccount)));
+
+            mediaServices.Add(new("Imgur", new Imgur(TwitterConfiguration.DefaultConfiguration())));
+
+            this.MediaServices = mediaServices.ToArray();
         }
 
         public void SelectMediaService(string serviceName, int? index = null)

@@ -108,12 +108,12 @@ namespace OpenTween.SocialProtocol
             return this.Primary;
         }
 
-        public ISocialAccount? GetAccountForPostId(PostId postId, AccountKey? preferedAccountKey)
+        public ISocialAccount? GetAccountForPostId(PostId postId, AccountKey? preferredAccountKey)
         {
-            if (preferedAccountKey != null && this.accounts.TryGetValue(preferedAccountKey.Value, out var preferedAccount))
+            if (preferredAccountKey != null && this.accounts.TryGetValue(preferredAccountKey.Value, out var preferredAccount))
             {
-                if (preferedAccount.CanUsePostId(postId))
-                    return preferedAccount;
+                if (preferredAccount.CanUsePostId(postId))
+                    return preferredAccount;
             }
 
             var primaryAccount = this.Primary;

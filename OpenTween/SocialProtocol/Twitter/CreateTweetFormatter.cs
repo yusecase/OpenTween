@@ -52,7 +52,7 @@ namespace OpenTween.SocialProtocol.Twitter
             var createParams = new CreateTweetParams(
                 formState.Text,
                 formState.InReplyTo,
-                formState.MediaIds
+                formState.MediaIds.Cast<TwitterMediaId>().ToArray()
             );
 
             // DM の場合はこれ以降の処理を行わない

@@ -97,6 +97,15 @@ namespace OpenTween.Properties {
         }
         
         /// <summary>
+        ///   この機能を使用するためにはアカウントの再設定が必要です に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string AdditionalScopeRequired_Message {
+            get {
+                return ResourceManager.GetString("AdditionalScopeRequired_Message", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   発言一覧 に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string AddNewTab_ListView_AccessibleName {
@@ -616,6 +625,12 @@ namespace OpenTween.Properties {
         /// <summary>
         ///   更新履歴
         ///
+        ///==== Ver 3.15.0(2024/06/14)
+        /// * NEW: Misskeyでのノート投稿時のファイル添付に対応しました
+        ///   - 追加で必要な権限があるため、前バージョンから使用している Misskey アカウントは再度追加し直す必要があります
+        /// * FIX: Favoritesタブが空のまま更新されない不具合を修正
+        /// * FIX: 検索タブのクエリ入力欄で日本語入力をオンにできない不具合を修正
+        /// 
         ///==== Ver 3.14.0(2024/06/11)
         /// * NEW: メインアカウント以外のホームタイムライン表示に対応
         ///   - タブ単位で切り替わるマルチアカウント機能です
@@ -623,13 +638,7 @@ namespace OpenTween.Properties {
         ///   - 現時点ではメインアカウント以外のタブ設定は次回起動時に保持されません
         /// * NEW: Misskeyアカウントのホームタイムライン表示・投稿に対応しました
         ///   - 現時点では Misskey アカウントをメインに設定することはできません
-        ///   - MFMの表示には対応していません
-        /// * NEW: Twemoji 15.1.0 に対応しました
-        ///   - Unicode 15.1 で追加された絵文字が表示されるようになります
-        /// * NEW: WebP画像の表示に対応しました
-        ///   - プロフィール画像やサムネイル画像にWebPが使われている場合も表示が可能になります
-        ///   - 「WebP画像拡張機能」がインストールされている環境でのみ動作します
-        /// * CHG: 設定画面でのアカウント一覧の表 [残りの文字列は切り詰められました]&quot;; に類似しているローカライズされた文字列を検索します。
+        ///   - MFMの表示には対応していません [残りの文字列は切り詰められました]&quot;; に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ChangeLog {
             get {

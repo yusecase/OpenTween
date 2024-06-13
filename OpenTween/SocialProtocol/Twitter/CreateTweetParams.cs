@@ -31,13 +31,13 @@ namespace OpenTween.SocialProtocol.Twitter
     public record CreateTweetParams(
         string Text,
         PostClass? InReplyTo = null,
-        IReadOnlyList<long>? MediaIds = null,
+        IReadOnlyList<TwitterMediaId>? MediaIds = null,
         bool AutoPopulateReplyMetadata = false,
         IReadOnlyList<PersonId>? ExcludeReplyUserIds = null,
         string? AttachmentUrl = null
     )
     {
-        public IReadOnlyList<long> MediaIds { get; init; } = MediaIds ?? Array.Empty<long>();
+        public IReadOnlyList<TwitterMediaId> MediaIds { get; init; } = MediaIds ?? Array.Empty<TwitterMediaId>();
 
         public IReadOnlyList<PersonId> ExcludeReplyUserIds { get; init; } = ExcludeReplyUserIds ?? Array.Empty<PersonId>();
 

@@ -23,6 +23,7 @@ using System;
 using System.Threading.Tasks;
 using Moq;
 using OpenTween.Connection;
+using OpenTween.SocialProtocol.Misskey;
 using Xunit;
 
 namespace OpenTween.Api.Misskey
@@ -43,7 +44,7 @@ namespace OpenTween.Api.Misskey
                     var request = Assert.IsType<PostJsonRequest>(x);
                     Assert.Equal(new("notes/create", UriKind.Relative), request.RequestUri);
                     Assert.Equal(
-                        """{"replyId":"aaaaa","text":"tetete","visibility":"public"}""",
+                        """{"fileIds":["bbbbb"],"replyId":"aaaaa","text":"tetete","visibility":"public"}""",
                         request.JsonString
                     );
                 })
@@ -54,6 +55,36 @@ namespace OpenTween.Api.Misskey
                 Text = "tetete",
                 Visibility = "public",
                 ReplyId = new("aaaaa"),
+                FileIds = new[] { new MisskeyFileId("bbbbb") },
+            };
+            await request.Send(mock.Object);
+
+            mock.VerifyAll();
+        }
+
+        [Fact]
+        public async Task Send_RenoteTest()
+        {
+            var response = TestUtils.CreateApiResponse(new MisskeyNote());
+
+            var mock = new Mock<IApiConnection>();
+            mock.Setup(x =>
+                    x.SendAsync(It.IsAny<IHttpRequest>())
+                )
+                .Callback<IHttpRequest>(x =>
+                {
+                    var request = Assert.IsType<PostJsonRequest>(x);
+                    Assert.Equal(new("notes/create", UriKind.Relative), request.RequestUri);
+                    Assert.Equal(
+                        """{"renoteId":"aaaaa"}""",
+                        request.JsonString
+                    );
+                })
+                .ReturnsAsync(response);
+
+            var request = new NoteCreateRequest
+            {
+                RenoteId = new("aaaaa"),
             };
             await request.Send(mock.Object);
 

@@ -28,6 +28,8 @@ namespace OpenTween.Connection
 {
     public interface IApiConnection : IDisposable
     {
+        void ThrowIfUnauthorizedScope(string scope);
+
         Task<ApiResponse> SendAsync(IHttpRequest request);
     }
 }

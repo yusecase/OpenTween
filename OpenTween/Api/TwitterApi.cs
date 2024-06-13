@@ -32,6 +32,7 @@ using System.Threading.Tasks;
 using OpenTween.Api.DataModel;
 using OpenTween.Connection;
 using OpenTween.Models;
+using OpenTween.SocialProtocol.Twitter;
 
 namespace OpenTween.Api
 {
@@ -191,7 +192,7 @@ namespace OpenTween.Api
         public async Task<LazyJson<TwitterStatus>> StatusesUpdate(
             string status,
             TwitterStatusId? replyToId,
-            IReadOnlyList<long>? mediaIds,
+            IReadOnlyList<TwitterMediaId>? mediaIds,
             bool? autoPopulateReplyMetadata = null,
             IReadOnlyList<TwitterUserId>? excludeReplyUserIds = null,
             string? attachmentUrl = null)
@@ -207,7 +208,7 @@ namespace OpenTween.Api
             if (replyToId != null)
                 param["in_reply_to_status_id"] = replyToId.Id;
             if (mediaIds != null && mediaIds.Count > 0)
-                param.Add("media_ids", string.Join(",", mediaIds));
+                param.Add("media_ids", string.Join(",", mediaIds.Select(x => x.Id)));
             if (autoPopulateReplyMetadata != null)
                 param["auto_populate_reply_metadata"] = autoPopulateReplyMetadata.Value ? "true" : "false";
             if (excludeReplyUserIds != null && excludeReplyUserIds.Count > 0)
@@ -613,7 +614,7 @@ namespace OpenTween.Api
                 .ConfigureAwait(false);
         }
 
-        public async Task<LazyJson<TwitterMessageEventSingle>> DirectMessagesEventsNew(TwitterUserId recipientId, string text, long? mediaId = null)
+        public async Task<LazyJson<TwitterMessageEventSingle>> DirectMessagesEventsNew(TwitterUserId recipientId, string text, TwitterMediaId? mediaId = null)
         {
             var attachment = "";
             if (mediaId != null)
@@ -622,7 +623,7 @@ namespace OpenTween.Api
                             "attachment": {
                               "type": "media",
                               "media": {
-                                "id": "{{JsonUtils.EscapeJsonString(mediaId.ToString())}}"
+                                "id": "{{JsonUtils.EscapeJsonString(mediaId.Id)}}"
                               }
                             }
                     """;
@@ -1106,7 +1107,7 @@ namespace OpenTween.Api
             return response.ReadAsLazyJson<TwitterUploadMediaInit>();
         }
 
-        public async Task MediaUploadAppend(long mediaId, int segmentIndex, IMediaItem media)
+        public async Task MediaUploadAppend(TwitterMediaId mediaId, int segmentIndex, IMediaItem media)
         {
             var request = new PostMultipartRequest
             {
@@ -1114,7 +1115,7 @@ namespace OpenTween.Api
                 Query = new Dictionary<string, string>
                 {
                     ["command"] = "APPEND",
-                    ["media_id"] = mediaId.ToString(),
+                    ["media_id"] = mediaId.Id,
                     ["segment_index"] = segmentIndex.ToString(),
                 },
                 Media = new Dictionary<string, IMediaItem>
@@ -1128,7 +1129,7 @@ namespace OpenTween.Api
                 .ConfigureAwait(false);
         }
 
-        public async Task<LazyJson<TwitterUploadMediaResult>> MediaUploadFinalize(long mediaId)
+        public async Task<LazyJson<TwitterUploadMediaResult>> MediaUploadFinalize(TwitterMediaId mediaId)
         {
             var request = new PostRequest
             {
@@ -1136,7 +1137,7 @@ namespace OpenTween.Api
                 Query = new Dictionary<string, string>
                 {
                     ["command"] = "FINALIZE",
-                    ["media_id"] = mediaId.ToString(),
+                    ["media_id"] = mediaId.Id,
                 },
             };
 
@@ -1146,7 +1147,7 @@ namespace OpenTween.Api
             return response.ReadAsLazyJson<TwitterUploadMediaResult>();
         }
 
-        public async Task<TwitterUploadMediaResult> MediaUploadStatus(long mediaId)
+        public async Task<TwitterUploadMediaResult> MediaUploadStatus(TwitterMediaId mediaId)
         {
             var request = new GetRequest
             {
@@ -1154,7 +1155,7 @@ namespace OpenTween.Api
                 Query = new Dictionary<string, string>
                 {
                     ["command"] = "STATUS",
-                    ["media_id"] = mediaId.ToString(),
+                    ["media_id"] = mediaId.Id,
                 },
             };
 
@@ -1165,13 +1166,14 @@ namespace OpenTween.Api
                 .ConfigureAwait(false);
         }
 
-        public async Task MediaMetadataCreate(long mediaId, string altText)
+        public async Task MediaMetadataCreate(TwitterMediaId mediaId, string altText)
         {
+            var escapedMediaId = JsonUtils.EscapeJsonString(mediaId.Id);
             var escapedAltText = JsonUtils.EscapeJsonString(altText);
             var request = new PostJsonRequest
             {
                 RequestUri = new("https://upload.twitter.com/1.1/media/metadata/create.json"),
-                JsonString = $$$"""{"media_id": "{{{mediaId}}}", "alt_text": {"text": "{{{escapedAltText}}}"}}""",
+                JsonString = $$$"""{"media_id": "{{{escapedMediaId}}}", "alt_text": {"text": "{{{escapedAltText}}}"}}""",
             };
 
             await this.Connection.SendAsync(request)

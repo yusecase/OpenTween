@@ -74,12 +74,13 @@ namespace OpenTween.SocialProtocol.Misskey
             var serverUri = new Uri($"https://{accountSettings.ServerHostname}/");
             this.AccountState = new(serverUri, new(accountSettings.UserId), accountSettings.Username)
             {
+                AuthorizedScopes = accountSettings.Scopes,
                 HasUnrecoverableError = false,
             };
 
             var apiBaseUri = new Uri(serverUri, "/api/");
 
-            var newConnection = new MisskeyApiConnection(apiBaseUri, accountSettings.TokenSecret);
+            var newConnection = new MisskeyApiConnection(apiBaseUri, accountSettings.TokenSecret, this.AccountState);
             (this.connection, var oldConnection) = (newConnection, this.connection);
             oldConnection?.Dispose();
         }

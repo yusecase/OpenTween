@@ -56,10 +56,10 @@ namespace OpenTween
             mediaSelector.InitializeServices(twAccount);
 
             Assert.Equal("Twitter", mediaSelector.MediaServices[0].Key);
-            Assert.Equal("Imgur", mediaSelector.MediaServices[1].Key);
+            Assert.Equal("Imgur", mediaSelector.MediaServices[2].Key);
 
             mediaSelector.SelectedMediaServiceName = "Imgur";
-            Assert.Equal(1, mediaSelector.SelectedMediaServiceIndex);
+            Assert.Equal(2, mediaSelector.SelectedMediaServiceIndex);
 
             mediaSelector.SelectedMediaServiceName = "Twitter";
             Assert.Equal(0, mediaSelector.SelectedMediaServiceIndex);

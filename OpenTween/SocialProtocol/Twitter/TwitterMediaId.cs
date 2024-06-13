@@ -1,5 +1,5 @@
 ﻿// OpenTween - Client of Twitter
-// Copyright (c) 2016 kim_upsilon (@kim_upsilon) <https://upsilo.net/~upsilon/>
+// Copyright (c) 2024 kim_upsilon (@kim_upsilon) <https://upsilo.net/~upsilon/>
 // All rights reserved.
 //
 // This file is part of OpenTween.
@@ -21,18 +21,11 @@
 
 #nullable enable
 
-using System;
-using System.Collections.Generic;
 using OpenTween.Models;
 
-namespace OpenTween
+namespace OpenTween.SocialProtocol.Twitter
 {
-    public record PostStatusParams(
-        string Text,
-        PostClass? InReplyTo = null,
-        IReadOnlyList<INativeUploadMediaId>? MediaIds = null
-    )
-    {
-        public IReadOnlyList<INativeUploadMediaId> MediaIds { get; init; } = MediaIds ?? Array.Empty<INativeUploadMediaId>();
-    }
+    public record TwitterMediaId(
+        string Id
+    ) : INativeUploadMediaId;
 }

@@ -82,6 +82,10 @@ namespace OpenTween.Connection
             this.Http.Timeout = Timeout.InfiniteTimeSpan;
         }
 
+        public void ThrowIfUnauthorizedScope(string scope)
+        {
+        }
+
         public async Task<ApiResponse> SendAsync(IHttpRequest request)
         {
             var endpointName = request.EndpointName;

@@ -36,6 +36,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using OpenTween.Api.DataModel;
 using OpenTween.Setting;
+using OpenTween.SocialProtocol.Twitter;
 
 namespace OpenTween.MediaUploadServices
 {
@@ -89,7 +90,7 @@ namespace OpenTween.MediaUploadServices
                     throw new ArgumentException("Err:Media not found.");
             }
 
-            long[] mediaIds;
+            TwitterMediaId[] mediaIds;
 
             if (Twitter.DMSendTextRegex.IsMatch(postParams.Text))
                 mediaIds = new[] { await this.UploadMediaForDM(mediaItems).ConfigureAwait(false) };
@@ -106,7 +107,7 @@ namespace OpenTween.MediaUploadServices
         public void UpdateTwitterConfiguration(TwitterConfiguration config)
             => this.twitterConfig = config;
 
-        private async Task<long[]> UploadMediaForTweet(IMediaItem[] mediaItems)
+        private async Task<TwitterMediaId[]> UploadMediaForTweet(IMediaItem[] mediaItems)
         {
             var uploadTasks = from m in mediaItems
                               select this.UploadMediaItem(m, mediaCategory: null);
@@ -117,7 +118,7 @@ namespace OpenTween.MediaUploadServices
             return mediaIds;
         }
 
-        private async Task<long> UploadMediaForDM(IMediaItem[] mediaItems)
+        private async Task<TwitterMediaId> UploadMediaForDM(IMediaItem[] mediaItems)
         {
             if (mediaItems.Length > 1)
                 throw new InvalidOperationException("Err:Can't attach multiple media to DM.");
@@ -135,9 +136,9 @@ namespace OpenTween.MediaUploadServices
             return mediaId;
         }
 
-        private async Task<long> UploadMediaItem(IMediaItem mediaItem, string? mediaCategory)
+        private async Task<TwitterMediaId> UploadMediaItem(IMediaItem mediaItem, string? mediaCategory)
         {
-            async Task<long> UploadInternal(IMediaItem media, string? category)
+            async Task<TwitterMediaId> UploadInternal(IMediaItem media, string? category)
             {
                 var mediaId = await this.tw.UploadMedia(media, category)
                     .ConfigureAwait(false);

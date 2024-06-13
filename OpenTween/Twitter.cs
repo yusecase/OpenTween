@@ -212,7 +212,7 @@ namespace OpenTween
 
             if (Twitter.DMSendTextRegex.IsMatch(param.Text))
             {
-                var mediaId = param.MediaIds != null && param.MediaIds.Any() ? param.MediaIds[0] : (long?)null;
+                var mediaId = param.MediaIds?.FirstOrDefault();
 
                 await this.SendDirectMessage(param.Text, mediaId)
                     .ConfigureAwait(false);
@@ -264,7 +264,7 @@ namespace OpenTween
             return post;
         }
 
-        public async Task<long> UploadMedia(IMediaItem item, string? mediaCategory = null)
+        public async Task<TwitterMediaId> UploadMedia(IMediaItem item, string? mediaCategory = null)
         {
             this.CheckAccountState();
 
@@ -283,7 +283,7 @@ namespace OpenTween
             var initMedia = await initResponse.LoadJsonAsync()
                 .ConfigureAwait(false);
 
-            var mediaId = initMedia.MediaId;
+            var mediaId = new TwitterMediaId(initMedia.MediaIdStr);
 
             await this.Api.MediaUploadAppend(mediaId, 0, item)
                 .ConfigureAwait(false);
@@ -318,10 +318,10 @@ namespace OpenTween
             }
 
             succeeded:
-            return media.MediaId;
+            return mediaId;
         }
 
-        public async Task SendDirectMessage(string postStr, long? mediaId = null)
+        public async Task SendDirectMessage(string postStr, TwitterMediaId? mediaId = null)
         {
             this.CheckAccountState();
 
@@ -537,8 +537,11 @@ namespace OpenTween
         }
 
         internal PostClass[] CreatePostsFromJson(TwitterStatus[] statuses, bool firstLoad)
+            => this.CreatePostsFromJson(statuses, firstLoad, favTweet: false);
+
+        internal PostClass[] CreatePostsFromJson(TwitterStatus[] statuses, bool firstLoad, bool favTweet)
         {
-            var posts = statuses.Select(x => this.CreatePostsFromStatusData(x, firstLoad)).ToArray();
+            var posts = statuses.Select(x => this.CreatePostsFromStatusData(x, firstLoad, favTweet)).ToArray();
 
             TwitterPostFactory.AdjustSortKeyForPromotedPost(posts);
 

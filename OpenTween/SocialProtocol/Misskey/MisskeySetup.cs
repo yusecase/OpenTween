@@ -35,6 +35,7 @@ namespace OpenTween.SocialProtocol.Misskey
         public static readonly string[] AuthorizeScopes = new[]
         {
             "read:account",
+            "write:drive",
             "write:notes",
             "write:reactions",
         };
@@ -107,7 +108,7 @@ namespace OpenTween.SocialProtocol.Misskey
                 throw new InvalidOperationException($"{nameof(this.serverBaseUri)} is null");
 
             var apiBaseUri = new Uri(this.serverBaseUri, "/api/");
-            var apiConnection = new MisskeyApiConnection(apiBaseUri, accessToken: "");
+            var apiConnection = new MisskeyApiConnection(apiBaseUri, accessToken: "", new());
             var request = new MiauthCheckRequest
             {
                 SessionNonce = this.sessionNonce.ToString(),

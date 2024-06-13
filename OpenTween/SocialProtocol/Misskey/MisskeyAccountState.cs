@@ -40,6 +40,8 @@ namespace OpenTween.SocialProtocol.Misskey
 
         public string UserName { get; private set; }
 
+        public string[] AuthorizedScopes { get; set; } = Array.Empty<string>();
+
         public int? FollowersCount { get; private set; }
 
         public int? FriendsCount { get; private set; }

@@ -118,7 +118,7 @@ namespace OpenTween.SocialProtocol.Twitter
                 .ConfigureAwait(false);
 
             var (cursorTop, cursorBottom) = GetCursorFromResponse(statuses);
-            var posts = this.account.Legacy.CreatePostsFromJson(statuses, firstLoad);
+            var posts = this.account.Legacy.CreatePostsFromJson(statuses, firstLoad, favTweet: true);
 
             var filter = new TimelineResponseFilter(this.account.AccountState);
             posts = filter.Run(posts);

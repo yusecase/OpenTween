@@ -8,6 +8,7 @@
 	<data name="AccountListBoxItem_Disabled"><value>(Disabled)</value></data>
 	<data name="AccountListBoxItem_Primary"><value>(Primary)</value></data>
 	<data name="AccountTypeErrorText"><value>This feature is not available for current account.</value></data>
+	<data name="AdditionalScopeRequired_Message"><value>You will need to re-authorize the account to use this feature.</value></data>
 	<data name="AddNewTab_ListView_AccessibleName"><value>PostsList</value></data>
 	<data name="AddNewTabText1"><value>(New Tab)</value></data>
 	<data name="AddNewTabText2"><value>Name</value></data>

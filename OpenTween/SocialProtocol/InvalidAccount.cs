@@ -65,6 +65,10 @@ namespace OpenTween.SocialProtocol
 
         private class InvalidAccountConnection : IApiConnection
         {
+            public void ThrowIfUnauthorizedScope(string scope)
+            {
+            }
+
             public Task<ApiResponse> SendAsync(IHttpRequest request)
                 => throw new WebApiException("Invalid account");
 

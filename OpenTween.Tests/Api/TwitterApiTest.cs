@@ -33,6 +33,7 @@ using Moq;
 using OpenTween.Api.DataModel;
 using OpenTween.Connection;
 using OpenTween.Models;
+using OpenTween.SocialProtocol.Twitter;
 using Xunit;
 
 namespace OpenTween.Api
@@ -275,7 +276,7 @@ namespace OpenTween.Api
             await twitterApi.StatusesUpdate(
                     "hogehoge",
                     replyToId: new("100"),
-                    mediaIds: new[] { 10L, 20L },
+                    mediaIds: new TwitterMediaId[] { new("10"), new("20") },
                     autoPopulateReplyMetadata: true,
                     excludeReplyUserIds: new TwitterUserId[] { new("100"), new("200") },
                     attachmentUrl: "https://twitter.com/twitterapi/status/22634515958"
@@ -771,7 +772,7 @@ namespace OpenTween.Api
             using var twitterApi = new TwitterApi();
             twitterApi.ApiConnection = mock.Object;
 
-            await twitterApi.DirectMessagesEventsNew(recipientId: new("12345"), text: "hogehoge", mediaId: 67890L);
+            await twitterApi.DirectMessagesEventsNew(recipientId: new("12345"), text: "hogehoge", mediaId: new("67890"));
 
             mock.VerifyAll();
         }
@@ -1348,7 +1349,7 @@ namespace OpenTween.Api
             using var twitterApi = new TwitterApi();
             twitterApi.ApiConnection = mock.Object;
 
-            await twitterApi.MediaUploadAppend(mediaId: 11111L, segmentIndex: 1, media: media);
+            await twitterApi.MediaUploadAppend(mediaId: new("11111"), segmentIndex: 1, media: media);
 
             mock.VerifyAll();
         }
@@ -1370,7 +1371,7 @@ namespace OpenTween.Api
             using var twitterApi = new TwitterApi();
             twitterApi.ApiConnection = mock.Object;
 
-            await twitterApi.MediaUploadFinalize(mediaId: 11111L)
+            await twitterApi.MediaUploadFinalize(mediaId: new("11111"))
                 .IgnoreResponse();
 
             mock.VerifyAll();
@@ -1396,7 +1397,7 @@ namespace OpenTween.Api
             using var twitterApi = new TwitterApi();
             twitterApi.ApiConnection = mock.Object;
 
-            await twitterApi.MediaUploadStatus(mediaId: 11111L);
+            await twitterApi.MediaUploadStatus(mediaId: new("11111"));
 
             mock.VerifyAll();
         }
@@ -1413,7 +1414,7 @@ namespace OpenTween.Api
             using var twitterApi = new TwitterApi();
             twitterApi.ApiConnection = mock.Object;
 
-            await twitterApi.MediaMetadataCreate(mediaId: 12345L, altText: "hogehoge");
+            await twitterApi.MediaMetadataCreate(mediaId: new("12345"), altText: "hogehoge");
 
             mock.VerifyAll();
         }

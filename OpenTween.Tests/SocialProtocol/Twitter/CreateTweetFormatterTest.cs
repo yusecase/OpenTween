@@ -165,11 +165,11 @@ namespace OpenTween.SocialProtocol.Twitter
             // 引用ツイートと画像添付は併用できないため attachment_url は使用しない（現在は許容されているかも？）
             var postParams = new PostStatusParams(Text: "hoge https://twitter.com/twitterapi/status/22634515958")
             {
-                MediaIds = new[] { 1234L },
+                MediaIds = new[] { new TwitterMediaId("1234") },
             };
             var expected = new CreateTweetParams(Text: "hoge https://twitter.com/twitterapi/status/22634515958")
             {
-                MediaIds = new[] { 1234L },
+                MediaIds = new[] { new TwitterMediaId("1234") },
             };
             Assert.Equal(expected, formatter.CreateParams(postParams));
         }

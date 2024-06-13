@@ -3336,13 +3336,13 @@ namespace OpenTween
         {
             var statusText = this.StatusText.Text;
             var replyToPost = this.inReplyTo is (var inReplyToStatusId, _) ? this.statuses[inReplyToStatusId] : null;
-            var mediaIds = Array.Empty<long>();
+            var mediaIds = Array.Empty<TwitterMediaId>();
             if (setFakeMediaIds)
             {
                 // 文字数計算のために仮の mediaId を設定する
                 var useNativeUpload = this.ImageSelector.Visible && this.ImageSelector.Model.SelectedMediaService is { IsNativeUploadService: true };
                 if (useNativeUpload)
-                    mediaIds = new[] { -1L };
+                    mediaIds = new[] { new TwitterMediaId("") };
             }
             var statusParams = new PostStatusParams(statusText, replyToPost, mediaIds);
 
@@ -9004,8 +9004,8 @@ namespace OpenTween
 
         public ISocialAccount? GetAccountForPostId(PostId postId)
         {
-            var preferedAccountKey = this.CurrentTab.SourceAccountKey;
-            return this.accounts.GetAccountForPostId(postId, preferedAccountKey);
+            var preferredAccountKey = this.CurrentTab.SourceAccountKey;
+            return this.accounts.GetAccountForPostId(postId, preferredAccountKey);
         }
 
         /// <summary>

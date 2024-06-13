@@ -150,7 +150,7 @@ namespace OpenTween.SocialProtocol.Twitter
             var cursorTop = response.CursorTop;
             var cursorBottom = response.CursorBottom;
 
-            var posts = this.account.Legacy.CreatePostsFromJson(statuses, firstLoad);
+            var posts = this.account.Legacy.CreatePostsFromJson(statuses, firstLoad, favTweet: true);
 
             var filter = new TimelineResponseFilter(this.account.AccountState);
             posts = filter.Run(posts);

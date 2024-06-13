@@ -22,6 +22,7 @@
 #nullable enable
 
 using System;
+using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using OpenTween.Connection;
@@ -38,6 +39,8 @@ namespace OpenTween.Api.Misskey
         public MisskeyNoteId? ReplyId { get; set; }
 
         public MisskeyNoteId? RenoteId { get; set; }
+
+        public MisskeyFileId[] FileIds { get; set; } = Array.Empty<MisskeyFileId>();
 
         public async Task<MisskeyNote> Send(IApiConnection apiConnection)
         {
@@ -65,7 +68,9 @@ namespace OpenTween.Api.Misskey
             [property: DataMember(Name = "replyId", EmitDefaultValue = false)]
             string? ReplyId,
             [property: DataMember(Name = "renoteId", EmitDefaultValue = false)]
-            string? RenoteId
+            string? RenoteId,
+            [property: DataMember(Name = "fileIds", EmitDefaultValue = false)]
+            string[]? FileIds
         );
 
         [DataContract]
@@ -77,11 +82,16 @@ namespace OpenTween.Api.Misskey
 
         private string CreateRequestJson()
         {
+            var fileIds = this.FileIds.Length > 0
+                ? this.FileIds.Select(x => x.Id).ToArray()
+                : null;
+
             var body = new RequestBody(
                 Text: this.Text,
                 Visibility: this.Visibility,
                 ReplyId: this.ReplyId?.Id,
-                RenoteId: this.RenoteId?.Id
+                RenoteId: this.RenoteId?.Id,
+                FileIds: fileIds
             );
 
             return JsonUtils.SerializeJsonByDataContract(body);

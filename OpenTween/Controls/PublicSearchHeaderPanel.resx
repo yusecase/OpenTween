@@ -66,6 +66,7 @@
 	<data name="comboBoxLang.Size" type="System.Drawing.Size, System.Drawing"><value>50, 20</value></data>
 	<data name="comboBoxLang.TabIndex" type="System.Int32, mscorlib"><value>2</value></data>
 	<data name="comboBoxQuery.Anchor" type="System.Windows.Forms.AnchorStyles, System.Windows.Forms"><value>Left, Right</value></data>
+	<data name="comboBoxQuery.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms"><value>NoControl</value></data>
 	<data name="comboBoxQuery.Location" type="System.Drawing.Point, System.Drawing"><value>89, 1</value></data>
 	<data name="comboBoxQuery.Margin" type="System.Windows.Forms.Padding, System.Windows.Forms"><value>0, 0, 0, 0</value></data>
 	<data name="comboBoxQuery.Size" type="System.Drawing.Size, System.Drawing"><value>187, 20</value></data>

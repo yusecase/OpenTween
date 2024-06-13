@@ -23,12 +23,14 @@
 
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Net.Cache;
 using System.Net.Http;
 using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using OpenTween.Api.Misskey;
+using OpenTween.SocialProtocol.Misskey;
 
 namespace OpenTween.Connection
 {
@@ -40,11 +42,13 @@ namespace OpenTween.Connection
 
         private readonly Uri apiBaseUri;
         private readonly string accessToken;
+        private readonly MisskeyAccountState accountState;
 
-        public MisskeyApiConnection(Uri apiBaseUri, string accessToken)
+        public MisskeyApiConnection(Uri apiBaseUri, string accessToken, MisskeyAccountState accountState)
         {
             this.apiBaseUri = apiBaseUri;
             this.accessToken = accessToken;
+            this.accountState = accountState;
 
             this.InitializeHttpClients();
             Networking.WebProxyChanged += this.Networking_WebProxyChanged;
@@ -57,6 +61,12 @@ namespace OpenTween.Connection
 
             // タイムアウト設定は IHttpRequest.Timeout でリクエスト毎に制御する
             this.Http.Timeout = Timeout.InfiniteTimeSpan;
+        }
+
+        public void ThrowIfUnauthorizedScope(string scope)
+        {
+            if (!this.accountState.AuthorizedScopes.Contains(scope))
+                throw new AdditionalScopeRequiredException();
         }
 
         public async Task<ApiResponse> SendAsync(IHttpRequest request)

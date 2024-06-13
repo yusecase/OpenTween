@@ -109,6 +109,7 @@ namespace OpenTween.SocialProtocol.Misskey
                 ReplyId = postParams.InReplyTo is { } replyTo
                     ? this.AssertMisskeyNoteId(replyTo.StatusId)
                     : null,
+                FileIds = postParams.MediaIds.Cast<MisskeyFileId>().ToArray(),
             };
 
             var note = await request.Send(this.account.Connection)
