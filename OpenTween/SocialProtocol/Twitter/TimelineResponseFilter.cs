@@ -39,6 +39,8 @@ namespace OpenTween.SocialProtocol.Twitter
 
         public bool IsHomeTimeline { get; set; }
 
+        public bool IncludeRts { get; set; } = true;
+
         public TimelineResponseFilter(TwitterAccountState accountState)
         {
             this.accountState = accountState;
@@ -55,6 +57,9 @@ namespace OpenTween.SocialProtocol.Twitter
                 filteredPosts = this.FilterBlockedUserPosts(filteredPosts);
                 filteredPosts = this.FilterMutedUserPosts(filteredPosts);
             }
+
+            if (!this.IncludeRts)
+                filteredPosts = this.FilterRetweets(filteredPosts);
 
             return filteredPosts.ToArray();
         }
@@ -85,5 +90,8 @@ namespace OpenTween.SocialProtocol.Twitter
 
             return false;
         }
+
+        private IEnumerable<PostClass> FilterRetweets(IEnumerable<PostClass> posts)
+            => posts.Where(x => x.RetweetedId == null);
     }
 }

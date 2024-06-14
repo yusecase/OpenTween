@@ -228,7 +228,7 @@ namespace OpenTween
                     TweetText = param.Text,
                     InReplyToTweetId = param.InReplyTo?.StatusId.ToTwitterStatusId(),
                     ExcludeReplyUserIds = param.ExcludeReplyUserIds.OfType<TwitterUserId>().ToArray(),
-                    MediaIds = param.MediaIds.Select(x => x.ToString()).ToArray(),
+                    MediaIds = param.MediaIds.ToArray(),
                     AttachmentUrl = param.AttachmentUrl,
                 };
 

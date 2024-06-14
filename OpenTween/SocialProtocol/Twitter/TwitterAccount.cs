@@ -41,7 +41,7 @@ namespace OpenTween.SocialProtocol.Twitter
 
         public bool IsDisposed { get; private set; }
 
-        public TwitterAccountState AccountState { get; private set; } = new();
+        public TwitterAccountState AccountState { get; } = new();
 
         ISocialAccountState ISocialAccount.AccountState
             => this.AccountState;
@@ -72,12 +72,9 @@ namespace OpenTween.SocialProtocol.Twitter
             Debug.Assert(accountSettings.UniqueKey == this.UniqueKey.Id, "UniqueKey must be same as current value.");
 
             var credential = accountSettings.GetTwitterCredential();
-            var userId = new TwitterUserId(accountSettings.UserId);
 
-            this.AccountState = new TwitterAccountState(userId, accountSettings.Username)
-            {
-                HasUnrecoverableError = credential is TwitterCredentialNone,
-            };
+            this.AccountState.UpdateFromSettings(accountSettings);
+            this.AccountState.HasUnrecoverableError = credential is TwitterCredentialNone;
 
             var newConnection = new TwitterApiConnection(credential, this.AccountState);
             (this.apiConnection, var oldConnection) = (newConnection, this.apiConnection);

@@ -73,6 +73,12 @@ namespace OpenTween.SocialProtocol.Twitter
             this.UserName = userName;
         }
 
+        public void UpdateFromSettings(UserAccount accountSettings)
+        {
+            this.UserId = new(accountSettings.UserId);
+            this.UserName = accountSettings.Username;
+        }
+
         /// <summary>ユーザー情報を更新します</summary>
         public void UpdateFromUser(TwitterUser self)
         {

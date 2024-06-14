@@ -30,6 +30,7 @@ using System.Xml.XPath;
 using OpenTween.Api.DataModel;
 using OpenTween.Connection;
 using OpenTween.Models;
+using OpenTween.SocialProtocol.Twitter;
 
 namespace OpenTween.Api.GraphQL
 {
@@ -43,7 +44,7 @@ namespace OpenTween.Api.GraphQL
 
         public TwitterUserId[] ExcludeReplyUserIds { get; set; } = Array.Empty<TwitterUserId>();
 
-        public string[] MediaIds { get; set; } = Array.Empty<string>();
+        public TwitterMediaId[] MediaIds { get; set; } = Array.Empty<TwitterMediaId>();
 
         public string? AttachmentUrl { get; set; }
 
@@ -112,7 +113,7 @@ namespace OpenTween.Api.GraphQL
                         ? new(
                             MediaEntities: this.MediaIds
                                 .Select(x => new VariableMediaEntity(
-                                    MediaId: x,
+                                    MediaId: x.Id,
                                     TaggedUsers: Array.Empty<string>()
                                 ))
                                 .ToArray(),

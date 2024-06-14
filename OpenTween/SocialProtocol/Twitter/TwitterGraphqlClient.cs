@@ -33,6 +33,7 @@ using System.Threading.Tasks;
 using OpenTween.Api.GraphQL;
 using OpenTween.Api.TwitterV2;
 using OpenTween.Models;
+using OpenTween.Setting;
 
 namespace OpenTween.SocialProtocol.Twitter
 {
@@ -177,7 +178,10 @@ namespace OpenTween.SocialProtocol.Twitter
 
             var posts = this.account.Legacy.CreatePostsFromJson(statuses, firstLoad);
 
-            var filter = new TimelineResponseFilter(this.account.AccountState);
+            var filter = new TimelineResponseFilter(this.account.AccountState)
+            {
+                IncludeRts = SettingManager.Instance.Common.IsListsIncludeRts,
+            };
             posts = filter.Run(posts);
 
             return new(posts, cursorTop, cursorBottom);

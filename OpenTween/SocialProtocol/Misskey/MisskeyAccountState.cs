@@ -68,6 +68,14 @@ namespace OpenTween.SocialProtocol.Misskey
             this.UserName = userName;
         }
 
+        public void UpdateFromSettings(UserAccount accountSettings)
+        {
+            this.ServerUri = new($"https://{accountSettings.ServerHostname}/");
+            this.UserId = new(accountSettings.UserId);
+            this.UserName = accountSettings.Username;
+            this.AuthorizedScopes = accountSettings.Scopes;
+        }
+
         /// <summary>ユーザー情報を更新します</summary>
         public void UpdateFromUser(MisskeyUser self)
         {

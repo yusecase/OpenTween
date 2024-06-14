@@ -42,7 +42,7 @@ namespace OpenTween.SocialProtocol.Misskey
 
         public bool IsDisposed { get; private set; }
 
-        public MisskeyAccountState AccountState { get; private set; } = new();
+        public MisskeyAccountState AccountState { get; } = new();
 
         ISocialAccountState ISocialAccount.AccountState
             => this.AccountState;
@@ -71,14 +71,10 @@ namespace OpenTween.SocialProtocol.Misskey
         {
             Debug.Assert(accountSettings.UniqueKey == this.UniqueKey.Id, "UniqueKey must be same as current value.");
 
-            var serverUri = new Uri($"https://{accountSettings.ServerHostname}/");
-            this.AccountState = new(serverUri, new(accountSettings.UserId), accountSettings.Username)
-            {
-                AuthorizedScopes = accountSettings.Scopes,
-                HasUnrecoverableError = false,
-            };
+            this.AccountState.UpdateFromSettings(accountSettings);
+            this.AccountState.HasUnrecoverableError = false;
 
-            var apiBaseUri = new Uri(serverUri, "/api/");
+            var apiBaseUri = new Uri(this.AccountState.ServerUri, "/api/");
 
             var newConnection = new MisskeyApiConnection(apiBaseUri, accountSettings.TokenSecret, this.AccountState);
             (this.connection, var oldConnection) = (newConnection, this.connection);

@@ -23,6 +23,7 @@ using System.Threading.Tasks;
 using Moq;
 using OpenTween.Connection;
 using OpenTween.Models;
+using OpenTween.SocialProtocol.Twitter;
 using Xunit;
 
 namespace OpenTween.Api.GraphQL
@@ -104,7 +105,7 @@ namespace OpenTween.Api.GraphQL
             var request = new CreateTweetRequest
             {
                 TweetText = "tetete",
-                MediaIds = new[] { "11111", "22222" },
+                MediaIds = new TwitterMediaId[] { new("11111"), new("22222") },
             };
             await request.Send(mock.Object);
             mock.VerifyAll();
