@@ -38,6 +38,7 @@
             this.Label13 = new System.Windows.Forms.Label();
             this.CheckAlwaysTop = new System.Windows.Forms.CheckBox();
             this.CheckMonospace = new System.Windows.Forms.CheckBox();
+            this.CheckShowPostStatsInDetail = new System.Windows.Forms.CheckBox();
             this.CheckBalloonLimit = new System.Windows.Forms.CheckBox();
             this.ComboDispTitle = new System.Windows.Forms.ComboBox();
             this.Label45 = new System.Windows.Forms.Label();
@@ -108,6 +109,12 @@
             this.CheckMonospace.Name = "CheckMonospace";
             this.CheckMonospace.UseVisualStyleBackColor = true;
             // 
+            // CheckShowPostStatsInDetail
+            //
+            resources.ApplyResources(this.CheckShowPostStatsInDetail, "CheckShowPostStatsInDetail");
+            this.CheckShowPostStatsInDetail.Name = "CheckShowPostStatsInDetail";
+            this.CheckShowPostStatsInDetail.UseVisualStyleBackColor = true;
+            //
             // CheckBalloonLimit
             // 
             resources.ApplyResources(this.CheckBalloonLimit, "CheckBalloonLimit");
@@ -160,6 +167,7 @@
             this.Controls.Add(this.Label13);
             this.Controls.Add(this.CheckAlwaysTop);
             this.Controls.Add(this.CheckMonospace);
+            this.Controls.Add(this.CheckShowPostStatsInDetail);
             this.Controls.Add(this.CheckBalloonLimit);
             this.Controls.Add(this.ComboDispTitle);
             this.Controls.Add(this.Label45);
@@ -181,6 +189,7 @@
         internal System.Windows.Forms.Label Label13;
         internal System.Windows.Forms.CheckBox CheckAlwaysTop;
         internal System.Windows.Forms.CheckBox CheckMonospace;
+        internal System.Windows.Forms.CheckBox CheckShowPostStatsInDetail;
         internal System.Windows.Forms.CheckBox CheckBalloonLimit;
         internal System.Windows.Forms.ComboBox ComboDispTitle;
         internal System.Windows.Forms.Label Label45;

@@ -75,6 +75,8 @@ namespace OpenTween.Api.GraphQL
             Assert.Equal("1613784711020826626", post.StatusId.Id);
             Assert.Equal(new TwitterUserId("40480664"), post.UserId);
             Assert.False(post.IsPromoted);
+            Assert.Equal(6, post.FavoritedCount);
+            Assert.Equal(0, post.RetweetedCount);
         }
 
         [Fact]
@@ -108,6 +110,8 @@ namespace OpenTween.Api.GraphQL
             Assert.Equal(new TwitterUserId("40480664"), post.RetweetedByUserId);
             Assert.Equal("1617126084138659840", post.RetweetedId!.Id);
             Assert.Equal(new TwitterUserId("514241801"), post.UserId);
+            Assert.Equal(168, post.FavoritedCount);
+            Assert.Equal(254, post.RetweetedCount);
         }
 
         [Fact]

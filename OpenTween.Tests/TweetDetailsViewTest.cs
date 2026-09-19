@@ -79,6 +79,46 @@ namespace OpenTween
         }
 
         [Fact]
+        public void FormatPostStatsHtml_Test()
+        {
+            var post = new PostClass
+            {
+                FavoritedCount = 1234,
+                RetweetedCount = 56,
+            };
+
+            var expected = """<span class="post-stats">いいね: 1,234 / リポスト: 56</span><br />""";
+            Assert.Equal(expected, TweetDetailsView.FormatPostStatsHtml(post));
+        }
+
+        [Fact]
+        public void FormatPostDetailsHtml_ShowStatsTest()
+        {
+            var post = new PostClass
+            {
+                Text = "hogehoge",
+                FavoritedCount = 1,
+                RetweetedCount = 2,
+            };
+
+            var expected = """<span class="post-stats">いいね: 1 / リポスト: 2</span><br />hogehoge""";
+            Assert.Equal(expected, TweetDetailsView.FormatPostDetailsHtml(post, showPostStats: true));
+        }
+
+        [Fact]
+        public void FormatPostDetailsHtml_HideStatsTest()
+        {
+            var post = new PostClass
+            {
+                Text = "hogehoge",
+                FavoritedCount = 1,
+                RetweetedCount = 2,
+            };
+
+            Assert.Equal("hogehoge", TweetDetailsView.FormatPostDetailsHtml(post, showPostStats: false));
+        }
+
+        [Fact]
         public void StripLinkTagHtml_Test()
         {
             var html = """<a href="https://twitter.com/twitterapi">@twitterapi</a>""";

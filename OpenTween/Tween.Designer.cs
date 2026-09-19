@@ -44,7 +44,9 @@
             this.ToolStripSeparator20 = new System.Windows.Forms.ToolStripSeparator();
             this.ProtectTabMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.UreadManageMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.MarkAllAsReadTabMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.NotifyDispMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.DetectionOrderMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.SoundFileComboBox = new System.Windows.Forms.ToolStripComboBox();
             this.ToolStripSeparator18 = new System.Windows.Forms.ToolStripSeparator();
             this.FilterEditMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -512,7 +514,9 @@
             this.ToolStripSeparator20,
             this.ProtectTabMenuItem,
             this.UreadManageMenuItem,
+            this.MarkAllAsReadTabMenuItem,
             this.NotifyDispMenuItem,
+            this.DetectionOrderMenuItem,
             this.SoundFileComboBox,
             this.ToolStripSeparator18,
             this.FilterEditMenuItem,
@@ -555,6 +559,12 @@
             this.UreadManageMenuItem.Name = "UreadManageMenuItem";
             resources.ApplyResources(this.UreadManageMenuItem, "UreadManageMenuItem");
             this.UreadManageMenuItem.Click += new System.EventHandler(this.UreadManageMenuItem_Click);
+            //
+            // MarkAllAsReadTabMenuItem
+            //
+            this.MarkAllAsReadTabMenuItem.Name = "MarkAllAsReadTabMenuItem";
+            resources.ApplyResources(this.MarkAllAsReadTabMenuItem, "MarkAllAsReadTabMenuItem");
+            this.MarkAllAsReadTabMenuItem.Click += new System.EventHandler(this.MarkAllAsReadTabMenuItem_Click);
             // 
             // NotifyDispMenuItem
             // 
@@ -562,6 +572,13 @@
             this.NotifyDispMenuItem.Name = "NotifyDispMenuItem";
             resources.ApplyResources(this.NotifyDispMenuItem, "NotifyDispMenuItem");
             this.NotifyDispMenuItem.Click += new System.EventHandler(this.NotifyDispMenuItem_Click);
+            //
+            // DetectionOrderMenuItem
+            //
+            this.DetectionOrderMenuItem.CheckOnClick = true;
+            this.DetectionOrderMenuItem.Name = "DetectionOrderMenuItem";
+            resources.ApplyResources(this.DetectionOrderMenuItem, "DetectionOrderMenuItem");
+            this.DetectionOrderMenuItem.Click += new System.EventHandler(this.DetectionOrderMenuItem_Click);
             // 
             // SoundFileComboBox
             // 
@@ -2205,7 +2222,9 @@
         internal System.Windows.Forms.ToolStripMenuItem TabRenameMenuItem;
         internal System.Windows.Forms.ToolStripSeparator ToolStripSeparator20;
         internal System.Windows.Forms.ToolStripMenuItem UreadManageMenuItem;
+        internal System.Windows.Forms.ToolStripMenuItem MarkAllAsReadTabMenuItem;
         internal System.Windows.Forms.ToolStripMenuItem NotifyDispMenuItem;
+        internal System.Windows.Forms.ToolStripMenuItem DetectionOrderMenuItem;
         internal System.Windows.Forms.ToolStripComboBox SoundFileComboBox;
         internal System.Windows.Forms.ToolStripSeparator ToolStripSeparator18;
         internal System.Windows.Forms.ToolStripMenuItem FilterEditMenuItem;

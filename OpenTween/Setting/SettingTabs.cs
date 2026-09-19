@@ -54,6 +54,8 @@ namespace OpenTween
         [XmlType("TabClass")]
         public class SettingTabItem
         {
+            public PostStatsDisplayMode PostStatsDisplay { get; set; }
+
             /// <summary>タブの表示名</summary>
             public string TabName { get; set; } = "";
 
@@ -72,6 +74,12 @@ namespace OpenTween
 
             /// <summary>通知音</summary>
             public string SoundFile { get; set; } = "";
+
+            /// <summary>PublicSearch タブを初回検知順で表示する</summary>
+            public bool SortByDetectionOrder { get; set; }
+
+            /// <summary>PublicSearch タブの初回検知順を降順で表示する</summary>
+            public bool DetectionOrderDescending { get; set; } = true;
 
             /// <summary>
             /// 振り分けルール (<see cref="MyCommon.TabUsageType.UserDefined"/> で使用)

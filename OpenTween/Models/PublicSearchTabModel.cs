@@ -28,6 +28,8 @@
 #nullable enable
 
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using OpenTween.SocialProtocol;
 using OpenTween.SocialProtocol.Twitter;
@@ -61,6 +63,13 @@ namespace OpenTween.Models
 
         private string searchWords = "";
         private string searchLang = "";
+        private readonly ConcurrentDictionary<PostId, long> detectionBatches = new();
+        private long newestDetectionBatch;
+        private long oldestDetectionBatch;
+
+        public bool SortByDetectionOrder { get; private set; }
+
+        public bool DetectionOrderDescending { get; private set; } = true;
 
         public PublicSearchTabModel(string tabName)
             : base(tabName)
@@ -81,8 +90,7 @@ namespace OpenTween.Models
             var response = await account.Client.GetSearchTimeline(this.SearchWords, this.SearchLang, count, cursor, firstLoad)
                 .ConfigureAwait(false);
 
-            foreach (var post in response.Posts)
-                this.AddPostQueue(post);
+            this.AddPostsFromRefresh(response.Posts, backward);
 
             TabInformations.GetInstance().DistributePosts();
 
@@ -96,6 +104,75 @@ namespace OpenTween.Models
                 this.IsFirstLoadCompleted = true;
 
             progress.Report("Search refreshed");
+        }
+
+        internal void AddPostsFromRefresh(IEnumerable<PostClass> posts, bool backward)
+        {
+            var detectionBatch = backward
+                ? --this.oldestDetectionBatch
+                : ++this.newestDetectionBatch;
+
+            foreach (var post in posts)
+            {
+                this.detectionBatches.TryAdd(post.StatusId, detectionBatch);
+                this.AddPostQueue(post);
+            }
+        }
+
+        public void SetSortByDetectionOrder(bool enabled, bool descending = true)
+        {
+            this.SortByDetectionOrder = enabled;
+            this.DetectionOrderDescending = descending;
+
+            if (enabled)
+                base.SetSortMode(ComparerMode.Id, descending ? System.Windows.Forms.SortOrder.Descending : System.Windows.Forms.SortOrder.Ascending);
+            else
+                this.ApplySortMode();
+        }
+
+        public void ToggleDetectionSortOrder()
+        {
+            this.DetectionOrderDescending = !this.DetectionOrderDescending;
+            base.SetSortMode(
+                ComparerMode.Id,
+                this.DetectionOrderDescending ? System.Windows.Forms.SortOrder.Descending : System.Windows.Forms.SortOrder.Ascending
+            );
+        }
+
+        public override void SetSortMode(ComparerMode mode, System.Windows.Forms.SortOrder sortOrder)
+        {
+            if (this.SortByDetectionOrder)
+            {
+                base.SetSortMode(
+                    ComparerMode.Id,
+                    this.DetectionOrderDescending ? System.Windows.Forms.SortOrder.Descending : System.Windows.Forms.SortOrder.Ascending
+                );
+                return;
+            }
+
+            base.SetSortMode(mode, sortOrder);
+        }
+
+        protected override int ComparePosts(PostId xId, PostClass? xPost, PostId yId, PostClass? yPost)
+        {
+            if (!this.SortByDetectionOrder)
+                return base.ComparePosts(xId, xPost, yId, yPost);
+
+            var xBatch = this.detectionBatches.TryGetValue(xId, out var xValue) ? xValue : 0;
+            var yBatch = this.detectionBatches.TryGetValue(yId, out var yValue) ? yValue : 0;
+            var compare = xBatch.CompareTo(yBatch);
+            if (compare != 0)
+                return compare;
+
+            return Comparer<DateTimeUtc?>.Default.Compare(xPost?.CreatedAtForSorting, yPost?.CreatedAtForSorting);
+        }
+
+        public override void ClearIDs()
+        {
+            base.ClearIDs();
+            this.detectionBatches.Clear();
+            this.newestDetectionBatch = 0;
+            this.oldestDetectionBatch = 0;
         }
 
         /// <summary>

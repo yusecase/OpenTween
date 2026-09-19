@@ -181,6 +181,7 @@ namespace OpenTween
         public int SortColumn = 3;
         public int SortOrder = 1;
         public bool IsMonospace = false;
+        public bool ShowPostStatsInDetail = true;
         public bool ReadOldPosts = false;
         public string Language = "OS";
         public bool Nicoms = false;

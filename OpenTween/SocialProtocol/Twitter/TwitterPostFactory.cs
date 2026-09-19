@@ -183,6 +183,8 @@ namespace OpenTween.SocialProtocol.Twitter
                 Source = string.Intern(sourceText),
                 SourceUri = sourceUri,
                 IsFav = isFav,
+                FavoritedCount = originalStatus.FavoriteCount ?? 0,
+                RetweetedCount = originalStatus.RetweetCount,
                 IsReply = retweetedStatus == null && replyToList.Any(x => x.UserId == selfUserId),
                 InReplyToStatusId = originalStatus.InReplyToStatusIdStr != null ? new TwitterStatusId(originalStatus.InReplyToStatusIdStr) : null,
                 InReplyToUser = originalStatus.InReplyToScreenName,

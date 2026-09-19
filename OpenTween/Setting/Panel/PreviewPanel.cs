@@ -61,6 +61,7 @@ namespace OpenTween.Setting.Panel
             this.CheckBalloonLimit.Checked = settingCommon.LimitBalloon;
             this.chkTabIconDisp.Checked = settingCommon.TabIconDisp;
             this.CheckMonospace.Checked = settingCommon.IsMonospace;
+            this.CheckShowPostStatsInDetail.Checked = settingCommon.ShowPostStatsInDetail;
             this.CheckPreviewEnable.Checked = settingCommon.PreviewEnable;
             this.CheckStatusAreaAtBottom.Checked = settingCommon.StatusAreaAtBottom;
             this.ReplyIconStateCombo.SelectedIndex = settingCommon.ReplyIconState switch
@@ -98,6 +99,7 @@ namespace OpenTween.Setting.Panel
             settingCommon.LimitBalloon = this.CheckBalloonLimit.Checked;
             settingCommon.TabIconDisp = this.chkTabIconDisp.Checked;
             settingCommon.IsMonospace = this.CheckMonospace.Checked;
+            settingCommon.ShowPostStatsInDetail = this.CheckShowPostStatsInDetail.Checked;
             settingCommon.PreviewEnable = this.CheckPreviewEnable.Checked;
             settingCommon.StatusAreaAtBottom = this.CheckStatusAreaAtBottom.Checked;
             settingCommon.ReplyIconState = this.ReplyIconStateCombo.SelectedIndex switch

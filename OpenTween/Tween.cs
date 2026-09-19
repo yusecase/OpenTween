@@ -266,6 +266,7 @@ namespace OpenTween
             this.thumbGenerator = thumbGenerator;
 
             this.InitializeComponent();
+            this.InitializePostStatsMenu();
 
             if (!this.DesignMode)
             {
@@ -691,7 +692,20 @@ namespace OpenTween
             this.columnOrgText[6] = "";
             this.columnOrgText[7] = "Source";
 
-            var c = this.statuses.SortMode switch
+            var sortMode = this.statuses.SortMode;
+            var sortOrder = this.statuses.SortOrder;
+
+            if (!MyCommon.IsNullOrEmpty(this.statuses.SelectedTabName) &&
+                this.statuses.Tabs.TryGetValue(this.statuses.SelectedTabName, out var selectedTab) &&
+                selectedTab is PublicSearchTabModel { SortByDetectionOrder: true } searchTab)
+            {
+                this.columnText[3] = this.columnOrgText[3] =
+                    Properties.Resources.ResourceManager.GetString("DetectionOrderColumnText") ?? "Detection order";
+                sortMode = ComparerMode.Id;
+                sortOrder = searchTab.SortOrder;
+            }
+
+            var c = sortMode switch
             {
                 ComparerMode.Nickname => 1, // ニックネーム
                 ComparerMode.Data => 2, // 本文
@@ -703,7 +717,7 @@ namespace OpenTween
 
             if (this.Use2ColumnsMode)
             {
-                if (this.statuses.SortOrder == SortOrder.Descending)
+                if (sortOrder == SortOrder.Descending)
                 {
                     // U+25BE BLACK DOWN-POINTING SMALL TRIANGLE
                     this.columnText[2] = this.columnOrgText[2] + "▾";
@@ -716,7 +730,7 @@ namespace OpenTween
             }
             else
             {
-                if (this.statuses.SortOrder == SortOrder.Descending)
+                if (sortOrder == SortOrder.Descending)
                 {
                     // U+25BE BLACK DOWN-POINTING SMALL TRIANGLE
                     this.columnText[c] = this.columnOrgText[c] + "▾";
@@ -2034,7 +2048,28 @@ namespace OpenTween
             if (this.settings.Common.SortOrderLock)
                 return;
 
+            if (this.CurrentTab is PublicSearchTabModel { SortByDetectionOrder: true } searchTab)
+            {
+                if (sortColumn == ComparerMode.Id)
+                {
+                    searchTab.ToggleDetectionSortOrder();
+                    this.RefreshCurrentListAfterSort();
+                    this.SaveConfigsTabs();
+                    return;
+                }
+
+                searchTab.SetSortByDetectionOrder(false, searchTab.DetectionOrderDescending);
+                this.SaveConfigsTabs();
+            }
+
             this.statuses.ToggleSortOrder(sortColumn);
+            this.RefreshCurrentListAfterSort();
+
+            this.MarkSettingCommonModified();
+        }
+
+        private void RefreshCurrentListAfterSort()
+        {
             this.InitColumnText();
 
             var list = this.CurrentListView;
@@ -2046,9 +2081,7 @@ namespace OpenTween
             else
             {
                 for (var i = 0; i <= 7; i++)
-                {
                     list.Columns[i].Text = this.columnText[i];
-                }
             }
 
             this.listCache?.PurgeCache();
@@ -2064,9 +2097,8 @@ namespace OpenTween
                     list.EnsureVisible(idx);
                 }
             }
-            list.Refresh();
 
-            this.MarkSettingCommonModified();
+            list.Refresh();
         }
 
         private void TweenMain_LocationChanged(object sender, EventArgs e)
@@ -3907,7 +3939,10 @@ namespace OpenTween
             var oldDisplayPost = this.displayPost;
             this.displayPost = currentPost;
 
-            if (!forceupdate && currentPost.Equals(oldDisplayPost))
+            var showStats = this.CurrentTab.ShouldShowPostStats(this.settings.Common.ShowPostStatsInDetail);
+            var statsChanged = this.tweetDetailsView.ShowPostStatsOverride != showStats;
+            this.tweetDetailsView.ShowPostStatsOverride = showStats;
+            if (!forceupdate && !statsChanged && currentPost.Equals(oldDisplayPost))
                 return;
 
             var loadTasks = new TaskCollection();
@@ -5495,6 +5530,7 @@ namespace OpenTween
                     Protected = tab.Protected,
                     Notify = tab.Notify,
                     SoundFile = tab.SoundFile,
+                    PostStatsDisplay = tab.PostStatsDisplay,
                 };
 
                 switch (tab)
@@ -5509,6 +5545,8 @@ namespace OpenTween
                     case PublicSearchTabModel searchTab:
                         tabSetting.SearchWords = searchTab.SearchWords;
                         tabSetting.SearchLang = searchTab.SearchLang;
+                        tabSetting.SortByDetectionOrder = searchTab.SortByDetectionOrder;
+                        tabSetting.DetectionOrderDescending = searchTab.DetectionOrderDescending;
                         break;
                     case ListTimelineTabModel listTab:
                         tabSetting.ListInfo = listTab.ListInfo;
@@ -5949,6 +5987,8 @@ namespace OpenTween
                 return;
 
             this.NotifyDispMenuItem.Checked = tb.Notify;
+            foreach (ToolStripMenuItem item in this.postStatsMenu.DropDownItems)
+                item.Checked = (PostStatsDisplayMode)item.Tag == tb.PostStatsDisplay;
             this.NotifyTbMenuItem.Checked = tb.Notify;
 
             this.soundfileListup = true;
@@ -5973,6 +6013,9 @@ namespace OpenTween
             this.soundfileListup = false;
             this.UreadManageMenuItem.Checked = tb.UnreadManage;
             this.UnreadMngTbMenuItem.Checked = tb.UnreadManage;
+            this.MarkAllAsReadTabMenuItem.Enabled = tb.UnreadCount > 0;
+            this.DetectionOrderMenuItem.Visible = tb is PublicSearchTabModel;
+            this.DetectionOrderMenuItem.Checked = tb is PublicSearchTabModel { SortByDetectionOrder: true };
 
             this.TabMenuControl(this.rclickTabName);
         }
@@ -6038,6 +6081,93 @@ namespace OpenTween
             this.ChangeTabUnreadManage(this.rclickTabName, this.UreadManageMenuItem.Checked);
 
             this.SaveConfigsTabs();
+        }
+
+        private void MarkAllAsReadTabMenuItem_Click(object sender, EventArgs e)
+        {
+            if (MyCommon.IsNullOrEmpty(this.rclickTabName))
+                return;
+
+            if (!this.statuses.Tabs.TryGetValue(this.rclickTabName, out var targetTab))
+                return;
+
+            this.statuses.SetReadTab(targetTab);
+
+            if (this.CurrentTabName == this.rclickTabName)
+            {
+                this.listCache?.PurgeCache();
+                this.CurrentListView.Refresh();
+            }
+
+            foreach (var (tab, index) in this.statuses.Tabs.WithIndex())
+            {
+                if (!this.settings.Common.TabIconDisp || tab.UnreadCount != 0)
+                    continue;
+
+                var tabPage = this.ListTab.TabPages[index];
+                if (tabPage.ImageIndex == 0)
+                    tabPage.ImageIndex = -1;
+            }
+
+            this.ListTab.Refresh();
+            this.SetMainWindowTitle();
+            this.SetStatusLabelUrl();
+        }
+
+        private readonly ToolStripMenuItem postStatsMenu = new();
+
+        private void InitializePostStatsMenu()
+        {
+            this.postStatsMenu.Text = Properties.Resources.ResourceManager.GetString("PostStatsMenuText");
+            foreach (var mode in new[] { PostStatsDisplayMode.Inherit, PostStatsDisplayMode.Show, PostStatsDisplayMode.Hide })
+            {
+                var item = new ToolStripMenuItem(Properties.Resources.ResourceManager.GetString("PostStats" + mode))
+                {
+                    Tag = mode,
+                };
+                item.Click += this.PostStatsMenu_Click;
+                this.postStatsMenu.DropDownItems.Add(item);
+            }
+
+            this.ContextMenuTabProperty.Items.Insert(
+                this.ContextMenuTabProperty.Items.IndexOf(this.DetectionOrderMenuItem) + 1,
+                this.postStatsMenu);
+        }
+
+        private void PostStatsMenu_Click(object sender, EventArgs e)
+        {
+            if (MyCommon.IsNullOrEmpty(this.rclickTabName) ||
+                !this.statuses.Tabs.TryGetValue(this.rclickTabName, out var tab))
+                return;
+
+            tab.PostStatsDisplay = (PostStatsDisplayMode)((ToolStripMenuItem)sender).Tag;
+            this.SaveConfigsTabs();
+            if (tab == this.CurrentTab)
+            {
+                this.listCache?.PurgeCache();
+                this.CurrentListView.Invalidate();
+                this.DispSelectedPost(forceupdate: true);
+            }
+        }
+
+        private void DetectionOrderMenuItem_Click(object sender, EventArgs e)
+        {
+            if (MyCommon.IsNullOrEmpty(this.rclickTabName))
+                return;
+
+            if (!this.statuses.Tabs.TryGetValue(this.rclickTabName, out var targetTab) ||
+                targetTab is not PublicSearchTabModel searchTab)
+                return;
+
+            var enabled = this.DetectionOrderMenuItem.Checked;
+            searchTab.SetSortByDetectionOrder(enabled, searchTab.DetectionOrderDescending);
+            if (!enabled)
+                searchTab.SetSortMode(this.statuses.SortMode, this.statuses.SortOrder);
+
+            this.SaveConfigsTabs();
+
+            if (this.CurrentTabName == this.rclickTabName)
+                this.RefreshCurrentListAfterSort();
         }
 
         public void ChangeTabUnreadManage(string tabName, bool isManage)
@@ -7613,6 +7743,7 @@ namespace OpenTween
             this.listCache?.PurgeCache();
 
             this.statuses.SelectTab(tabName);
+            this.InitColumnText();
 
             this.InitializeTimelineListView();
 

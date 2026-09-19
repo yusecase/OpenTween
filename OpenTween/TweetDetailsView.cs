@@ -201,6 +201,8 @@ namespace OpenTween
                 sb.AppendFormat("FilterHit      : {0}<br>", post.FilterHit);
                 sb.AppendFormat("RetweetedBy    : {0}<br>", post.RetweetedBy);
                 sb.AppendFormat("RetweetedId    : {0}<br>", post.RetweetedId);
+                sb.AppendFormat("FavoritedCount : {0}<br>", post.FavoritedCount);
+                sb.AppendFormat("RetweetedCount : {0}<br>", post.RetweetedCount);
 
                 sb.AppendFormat("Media.Count    : {0}<br>", post.Media.Count);
                 if (post.Media.Count > 0)
@@ -220,8 +222,10 @@ namespace OpenTween
 
             using (ControlTransaction.Update(this.PostBrowser))
             {
+                var body = post.IsDeleted ? "(DELETED)" : this.FormatPostDetailsHtml(post);
+
                 this.PostBrowser.DocumentText =
-                    this.HtmlBuilder.Build(post.IsDeleted ? "(DELETED)" : post.Text);
+                    this.HtmlBuilder.Build(body);
 
                 this.PostBrowser.Document.Window.ScrollTo(0, 0);
             }
@@ -230,6 +234,22 @@ namespace OpenTween
 
             await loadTasks.RunAll();
         }
+
+        public bool? ShowPostStatsOverride { get; set; }
+
+        private string FormatPostDetailsHtml(PostClass post)
+            => FormatPostDetailsHtml(post, this.ShowPostStatsOverride ?? SettingManager.Instance.Common.ShowPostStatsInDetail);
+
+        internal static string FormatPostDetailsHtml(PostClass post, bool showPostStats)
+        {
+            if (!showPostStats || post.IsDm)
+                return post.Text;
+
+            return FormatPostStatsHtml(post) + post.Text;
+        }
+
+        internal static string FormatPostStatsHtml(PostClass post)
+            => $"""<span class="post-stats">いいね: {post.FavoritedCount:N0} / リポスト: {post.RetweetedCount:N0}</span><br />""";
 
         public void ScrollDownPostBrowser(bool forward)
         {

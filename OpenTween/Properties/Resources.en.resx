@@ -355,9 +355,14 @@ At least if the Twitter API key has been changed correctly, you can launch the a
  * {0} does not require administrator privileges.
  * If you run as administrator, operations to post images with D&amp;D will be restricted.
  * After running, the setting files of {0} will be able to modify only from administrator.</value></data>
+	<data name="DetectionOrderColumnText"><value>Detected</value></data>
 	<data name="Yes"><value>Yes</value></data>
 	<data name="YouTubeInfoText1"><value>Title:</value></data>
 	<data name="YouTubeInfoText2"><value>Length:</value></data>
 	<data name="YouTubeInfoText3"><value>Posted at:</value></data>
 	<data name="YouTubeInfoText4"><value>Views:</value></data>
+  <data name="PostStatsMenuText" xml:space="preserve"><value>Like and repost counts</value></data>
+  <data name="PostStatsInherit" xml:space="preserve"><value>Use global setting</value></data>
+  <data name="PostStatsShow" xml:space="preserve"><value>Show</value></data>
+  <data name="PostStatsHide" xml:space="preserve"><value>Hide</value></data>
 </root>

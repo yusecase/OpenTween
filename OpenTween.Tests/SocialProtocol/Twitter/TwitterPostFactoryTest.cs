@@ -73,6 +73,8 @@ namespace OpenTween.Models
         {
             var factory = new TwitterPostFactory(this.CreateTabinfo(), new());
             var status = this.CreateStatus();
+            status.FavoriteCount = 12;
+            status.RetweetCount = 34;
             var post = factory.CreateFromStatus(status, selfUserId: new("20000"), followerIds: EmptyIdSet, firstLoad: false);
 
             Assert.Equal(new TwitterStatusId(status.IdStr), post.StatusId);
@@ -89,7 +91,8 @@ namespace OpenTween.Models
             Assert.Null(post.PostGeo);
             Assert.Equal("OpenTween", post.Source);
             Assert.Equal("https://www.opentween.org/", post.SourceUri?.OriginalString);
-            Assert.Equal(0, post.FavoritedCount);
+            Assert.Equal(12, post.FavoritedCount);
+            Assert.Equal(34, post.RetweetedCount);
             Assert.False(post.IsFav);
             Assert.False(post.IsDm);
             Assert.False(post.IsDeleted);
@@ -156,8 +159,12 @@ namespace OpenTween.Models
         {
             var factory = new TwitterPostFactory(this.CreateTabinfo(), new());
             var originalStatus = this.CreateStatus();
+            originalStatus.FavoriteCount = 56;
+            originalStatus.RetweetCount = 78;
 
             var retweetStatus = this.CreateStatus();
+            retweetStatus.FavoriteCount = 1;
+            retweetStatus.RetweetCount = 2;
             retweetStatus.RetweetedStatus = originalStatus;
             retweetStatus.Source = """<a href="https://mobile.twitter.com" rel="nofollow">Twitter Web App</a>""";
 
@@ -170,6 +177,8 @@ namespace OpenTween.Models
 
             Assert.Equal("OpenTween", post.Source);
             Assert.Equal("https://www.opentween.org/", post.SourceUri?.OriginalString);
+            Assert.Equal(56, post.FavoritedCount);
+            Assert.Equal(78, post.RetweetedCount);
         }
 
         [Fact]

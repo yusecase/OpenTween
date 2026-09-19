@@ -389,9 +389,14 @@ OpenTween の製品名を変更して使用する場合は、新たに API キ�
  * {0}は管理者権限を必要とするソフトウェアではありません。
  * 管理者権限で実行するとD&amp;Dで画像を投稿する操作が制限されます。
  * {0}の設定ファイルが一般ユーザー権限で編集できなくなります。</value></data>
+	<data name="DetectionOrderColumnText"><value>検知順</value></data>
 	<data name="Yes"><value>はい</value></data>
 	<data name="YouTubeInfoText1"><value>タイトル:</value></data>
 	<data name="YouTubeInfoText2"><value>再生時間:</value></data>
 	<data name="YouTubeInfoText3"><value>投稿日時:</value></data>
 	<data name="YouTubeInfoText4"><value>再生数:</value></data>
+  <data name="PostStatsMenuText" xml:space="preserve"><value>いいね・リポスト数の表示</value></data>
+  <data name="PostStatsInherit" xml:space="preserve"><value>全体設定に従う</value></data>
+  <data name="PostStatsShow" xml:space="preserve"><value>表示する</value></data>
+  <data name="PostStatsHide" xml:space="preserve"><value>表示しない</value></data>
 </root>

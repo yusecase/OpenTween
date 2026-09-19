@@ -140,7 +140,8 @@ namespace OpenTween
         {
             var mk = new StringBuilder();
 
-            if (post.FavoritedCount > 0) mk.Append("+" + post.FavoritedCount);
+            if (this.tab.ShouldShowPostStats(this.settings.ShowPostStatsInDetail) && post.FavoritedCount > 0)
+                mk.Append("+" + post.FavoritedCount);
 
             ListViewItem itm;
             if (post.RetweetedId == null)

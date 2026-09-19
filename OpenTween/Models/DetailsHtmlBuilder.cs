@@ -36,6 +36,7 @@ namespace OpenTween.Models
             + "pre {font-family: inherit;} "
             + "a:link, a:visited, a:active, a:hover {color:rgb(%LINK_COLOR%); } "
             + "img.emoji {width: 1em; height: 1em; margin: 0 .05em 0 .1em; vertical-align: -0.1em; border: none;} "
+            + ".post-stats {color:rgb(%LINK_COLOR%); margin-bottom: 0.25em;} "
             + ".quote-tweet {border: 1px solid #ccc; margin: 1em; padding: 0.5em;} "
             + ".quote-tweet.reply {border-color: rgb(%BG_REPLY_COLOR%);} "
             + ".quote-tweet-link {color: inherit !important; text-decoration: none;}"

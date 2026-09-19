@@ -31,6 +31,49 @@ namespace OpenTween
     {
         private readonly Random random = new();
 
+        [Theory]
+        [InlineData(PostStatsDisplayMode.Inherit, true, "+25")]
+        [InlineData(PostStatsDisplayMode.Inherit, false, "")]
+        [InlineData(PostStatsDisplayMode.Show, false, "+25")]
+        [InlineData(PostStatsDisplayMode.Hide, true, "")]
+        public void PostStatsTabOverride_Test(PostStatsDisplayMode mode, bool globalSetting, string expected)
+        {
+            var tab = new PublicSearchTabModel("tab") { PostStatsDisplay = mode };
+            using var listView = new DetailsListView();
+            using var cache = new TimelineListViewCache(listView, tab, new() { ShowPostStatsInDetail = globalSetting });
+            var post = this.CreatePost();
+            post.FavoritedCount = 25;
+            tab.AddPostQueue(post);
+            tab.AddSubmit();
+            Assert.Equal(expected, cache.GetItem(0).SubItems[6].Text);
+
+            tab.PostStatsDisplay = PostStatsDisplayMode.Hide;
+            cache.PurgeCache();
+            Assert.Equal("", cache.GetItem(0).SubItems[6].Text);
+        }
+
+        [Theory]
+        [InlineData(PostStatsDisplayMode.Inherit)]
+        [InlineData(PostStatsDisplayMode.Show)]
+        [InlineData(PostStatsDisplayMode.Hide)]
+        public void PostStatsSettingsRoundTrip_Test(PostStatsDisplayMode mode)
+        {
+            var serializer = new System.Xml.Serialization.XmlSerializer(typeof(SettingTabs.SettingTabItem));
+            var setting = new SettingTabs.SettingTabItem
+            {
+                TabName = "search",
+                TabType = MyCommon.TabUsageType.PublicSearch,
+                PostStatsDisplay = mode,
+            };
+            using var writer = new System.IO.StringWriter();
+            serializer.Serialize(writer, setting);
+            using var reader = new System.IO.StringReader(writer.ToString());
+            var restored = (SettingTabs.SettingTabItem)serializer.Deserialize(reader);
+            var tab = new TabInformations().CreateTabFromSettings(restored);
+            Assert.NotNull(tab);
+            Assert.Equal(mode, tab.PostStatsDisplay);
+        }
+
         private PostClass CreatePost()
         {
             return new()
@@ -143,6 +186,26 @@ namespace OpenTween
 
             var item = cache.GetItem(0);
             Assert.Equal("+1", item.SubItems[6].Text);
+        }
+
+        [Fact]
+        public void GetItem_FavoritesHiddenTest()
+        {
+            var tab = new PublicSearchTabModel("tab");
+            using var listView = new DetailsListView();
+            using var cache = new TimelineListViewCache(listView, tab, new()
+            {
+                ShowPostStatsInDetail = false,
+            });
+
+            var post = this.CreatePost();
+            post.FavoritedCount = 1;
+
+            tab.AddPostQueue(post);
+            tab.AddSubmit();
+
+            var item = cache.GetItem(0);
+            Assert.Equal("", item.SubItems[6].Text);
         }
 
         [Fact]

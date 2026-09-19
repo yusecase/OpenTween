@@ -40,8 +40,25 @@ using OpenTween.SocialProtocol;
 
 namespace OpenTween.Models
 {
+    public enum PostStatsDisplayMode
+    {
+        Inherit,
+        Show,
+        Hide,
+    }
+
     public abstract class TabModel
     {
+        public PostStatsDisplayMode PostStatsDisplay { get; set; }
+
+        public bool ShouldShowPostStats(bool globalSetting)
+            => this.PostStatsDisplay switch
+            {
+                PostStatsDisplayMode.Show => true,
+                PostStatsDisplayMode.Hide => false,
+                _ => globalSetting,
+            };
+
         public string TabName { get; set; }
 
         public bool UnreadManage { get; set; } = true;
@@ -242,7 +259,7 @@ namespace OpenTween.Models
         /// <summary>
         /// ソート対象のフィールドとソート順を設定し、ソートを実行します
         /// </summary>
-        public void SetSortMode(ComparerMode mode, SortOrder sortOrder)
+        public virtual void SetSortMode(ComparerMode mode, SortOrder sortOrder)
         {
             this.SortMode = mode;
             this.SortOrder = sortOrder;
@@ -250,30 +267,16 @@ namespace OpenTween.Models
             this.ApplySortMode();
         }
 
-        private void ApplySortMode()
+        protected void ApplySortMode()
         {
             var sign = this.SortOrder == SortOrder.Ascending ? 1 : -1;
-
-            Comparison<PostClass?> postComparison = this.SortMode switch
-            {
-                ComparerMode.Id =>
-                    (x, y) => Comparer<DateTimeUtc?>.Default.Compare(x?.CreatedAtForSorting, y?.CreatedAtForSorting),
-                ComparerMode.Name =>
-                    (x, y) => Comparer<string?>.Default.Compare(x?.ScreenName, y?.ScreenName),
-                ComparerMode.Nickname =>
-                    (x, y) => Comparer<string?>.Default.Compare(x?.Nickname, y?.Nickname),
-                ComparerMode.Source =>
-                    (x, y) => Comparer<string?>.Default.Compare(x?.Source, y?.Source),
-                _ =>
-                    (x, y) => Comparer<string?>.Default.Compare(x?.TextFromApi, y?.TextFromApi),
-            };
 
             Comparison<PostId> comparison = (x, y) =>
             {
                 this.Posts.TryGetValue(x, out var xPost);
                 this.Posts.TryGetValue(y, out var yPost);
 
-                var compare = sign * postComparison(xPost, yPost);
+                var compare = sign * this.ComparePosts(x, xPost, y, yPost);
                 if (compare != 0)
                     return compare;
 
@@ -286,6 +289,21 @@ namespace OpenTween.Models
             this.ids = new IndexedSortedSet<PostId>(this.ids, comparer);
             this.unreadIds = new SortedSet<PostId>(this.unreadIds, comparer);
         }
+
+        protected virtual int ComparePosts(PostId xId, PostClass? xPost, PostId yId, PostClass? yPost)
+            => this.SortMode switch
+            {
+                ComparerMode.Id =>
+                    Comparer<DateTimeUtc?>.Default.Compare(xPost?.CreatedAtForSorting, yPost?.CreatedAtForSorting),
+                ComparerMode.Name =>
+                    Comparer<string?>.Default.Compare(xPost?.ScreenName, yPost?.ScreenName),
+                ComparerMode.Nickname =>
+                    Comparer<string?>.Default.Compare(xPost?.Nickname, yPost?.Nickname),
+                ComparerMode.Source =>
+                    Comparer<string?>.Default.Compare(xPost?.Source, yPost?.Source),
+                _ =>
+                    Comparer<string?>.Default.Compare(xPost?.TextFromApi, yPost?.TextFromApi),
+            };
 
         /// <summary>
         /// 次に表示する未読ツイートのIDを返します。

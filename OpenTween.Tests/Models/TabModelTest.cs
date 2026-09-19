@@ -997,6 +997,84 @@ namespace OpenTween.Models
 
             Assert.Throws<ArgumentException>(() => tab[2, 0]); // 範囲内だが startIndex > endIndex
         }
+
+        [Fact]
+        public void PublicSearchDetectionOrder_Test()
+        {
+            var tab = new PublicSearchTabModel("search");
+            tab.SetSortByDetectionOrder(enabled: true);
+
+            var firstBatch = new[]
+            {
+                new PostClass
+                {
+                    StatusId = new TwitterStatusId("300"),
+                    CreatedAtForSorting = new(2023, 1, 1, 0, 0, 3),
+                },
+                new PostClass
+                {
+                    StatusId = new TwitterStatusId("200"),
+                    CreatedAtForSorting = new(2023, 1, 1, 0, 0, 2),
+                },
+            };
+            tab.AddPostsFromRefresh(firstBatch, backward: false);
+            tab.AddSubmit();
+
+            var laterDetectedOldPost = new PostClass
+            {
+                StatusId = new TwitterStatusId("100"),
+                CreatedAtForSorting = new(2023, 1, 1, 0, 0, 1),
+            };
+            tab.AddPostsFromRefresh(new[] { laterDetectedOldPost }, backward: false);
+            tab.AddSubmit();
+
+            Assert.Equal(
+                new[]
+                {
+                    new TwitterStatusId("100"),
+                    new TwitterStatusId("300"),
+                    new TwitterStatusId("200"),
+                },
+                tab.StatusIds
+            );
+
+            tab.AddPostsFromRefresh(new[] { firstBatch[0] }, backward: false);
+            tab.AddSubmit();
+
+            Assert.Equal(
+                new[]
+                {
+                    new TwitterStatusId("100"),
+                    new TwitterStatusId("300"),
+                    new TwitterStatusId("200"),
+                },
+                tab.StatusIds
+            );
+
+            var backwardPost = new PostClass
+            {
+                StatusId = new TwitterStatusId("50"),
+                CreatedAtForSorting = new(2022, 12, 31, 23, 59, 59),
+            };
+            tab.AddPostsFromRefresh(new[] { backwardPost }, backward: true);
+            tab.AddSubmit();
+
+            Assert.Equal(new TwitterStatusId("50"), tab.StatusIds.Last());
+
+            tab.SetSortByDetectionOrder(enabled: false);
+            tab.SetSortMode(ComparerMode.Id, SortOrder.Descending);
+
+            Assert.Equal(
+                new[]
+                {
+                    new TwitterStatusId("300"),
+                    new TwitterStatusId("200"),
+                    new TwitterStatusId("100"),
+                    new TwitterStatusId("50"),
+                },
+                tab.StatusIds
+            );
+        }
     }
 
     public class TabUsageTypeExtTest

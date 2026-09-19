@@ -280,6 +280,15 @@ namespace OpenTween.Models
             tab.Protected = tabSetting.Protected;
             tab.Notify = tabSetting.Notify;
             tab.SoundFile = tabSetting.SoundFile;
+            tab.PostStatsDisplay = tabSetting.PostStatsDisplay;
+
+            if (tab is PublicSearchTabModel publicSearchTab)
+            {
+                publicSearchTab.SetSortByDetectionOrder(
+                    tabSetting.SortByDetectionOrder,
+                    tabSetting.DetectionOrderDescending
+                );
+            }
 
             if (tab is FilterTabModel filterTab)
             {
@@ -672,6 +681,18 @@ namespace OpenTween.Models
                     post.IsRead = read;
 
                 return true;
+            }
+        }
+
+        /// <summary>
+        /// 指定したタブに含まれる未読ツイートを全て既読にします。
+        /// </summary>
+        public void SetReadTab(TabModel tab)
+        {
+            lock (this.lockObj)
+            {
+                foreach (var statusId in tab.GetUnreadIds())
+                    this.SetReadAllTab(statusId, read: true);
             }
         }
 

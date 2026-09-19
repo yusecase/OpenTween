@@ -428,6 +428,8 @@ namespace OpenTween.Models
                 TabType = MyCommon.TabUsageType.PublicSearch,
                 SearchWords = "foo",
                 SearchLang = "ja",
+                SortByDetectionOrder = true,
+                DetectionOrderDescending = false,
             };
             var tabinfo = this.CreateInstance();
             var tab = tabinfo.CreateTabFromSettings(tabSetting);
@@ -436,6 +438,8 @@ namespace OpenTween.Models
             var searchTab = (PublicSearchTabModel)tab!;
             Assert.Equal("foo", searchTab.SearchWords);
             Assert.Equal("ja", searchTab.SearchLang);
+            Assert.True(searchTab.SortByDetectionOrder);
+            Assert.False(searchTab.DetectionOrderDescending);
         }
 
         [Fact]
@@ -660,6 +664,30 @@ namespace OpenTween.Models
             this.tabinfo.SetReadAllTab(new TwitterStatusId("100"), read: false);
             Assert.Equal(2, tab1.UnreadCount);
             Assert.Equal(1, tab2.UnreadCount);
+        }
+
+        [Fact]
+        public void SetReadTab_Test()
+        {
+            var tab1 = new PublicSearchTabModel("search1") { UnreadManage = true };
+            var tab2 = new PublicSearchTabModel("search2") { UnreadManage = true };
+
+            this.tabinfo.AddTab(tab1);
+            this.tabinfo.AddTab(tab2);
+
+            tab1.AddPostQueue(new PostClass { StatusId = new TwitterStatusId("100"), IsRead = false });
+            tab1.AddPostQueue(new PostClass { StatusId = new TwitterStatusId("150"), IsRead = false });
+            tab2.AddPostQueue(new PostClass { StatusId = new TwitterStatusId("150"), IsRead = false });
+            tab2.AddPostQueue(new PostClass { StatusId = new TwitterStatusId("200"), IsRead = false });
+
+            this.tabinfo.DistributePosts();
+            this.tabinfo.SubmitUpdate();
+
+            this.tabinfo.SetReadTab(tab1);
+
+            Assert.Equal(0, tab1.UnreadCount);
+            Assert.Equal(1, tab2.UnreadCount);
+            Assert.Equal(new TwitterStatusId("200"), tab2.NextUnreadId);
         }
 
         [Fact]

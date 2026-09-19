@@ -131,16 +131,26 @@ namespace OpenTween.Api.GraphQL
             static string? GetTextOrNull(XElement elm, string name)
                 => elm.Element(name)?.Value;
 
+            static int GetIntOrDefault(XElement elm, string name)
+                => int.TryParse(GetTextOrNull(elm, name), out var value) ? value : 0;
+
+            static int? GetIntOrNull(XElement elm, string name)
+                => int.TryParse(GetTextOrNull(elm, name), out var value) ? value : null;
+
             return new()
             {
                 IdStr = GetText(tweetElm, "rest_id"),
                 Source = GetText(tweetElm, "source"),
                 CreatedAt = GetText(tweetLegacyElm, "created_at"),
                 FullText = GetText(tweetLegacyElm, "full_text"),
+                FavoriteCount = GetIntOrNull(tweetLegacyElm, "favorite_count"),
                 InReplyToScreenName = GetTextOrNull(tweetLegacyElm, "in_reply_to_screen_name"),
                 InReplyToStatusIdStr = GetTextOrNull(tweetLegacyElm, "in_reply_to_status_id_str"),
                 InReplyToUserIdStr = GetTextOrNull(tweetLegacyElm, "in_reply_to_user_id_str"),
                 Favorited = GetTextOrNull(tweetLegacyElm, "favorited") is string favorited ? favorited == "true" : null,
+                QuoteCount = GetIntOrNull(tweetLegacyElm, "quote_count"),
+                ReplyCount = GetIntOrDefault(tweetLegacyElm, "reply_count"),
+                RetweetCount = GetIntOrDefault(tweetLegacyElm, "retweet_count"),
                 Entities = new()
                 {
                     UserMentions = tweetLegacyElm.XPathSelectElements("entities/user_mentions/item")
