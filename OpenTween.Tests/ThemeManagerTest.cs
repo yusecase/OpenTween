@@ -49,6 +49,52 @@ namespace OpenTween
         }
 
         [Fact]
+        public void UnifiedPostFontTest()
+        {
+            var settings = new SettingLocal
+            {
+                FontUnreadStr = "Arial, 8pt, style=Bold, Underline",
+                FontReadStr = "Arial, 8pt",
+                FontDetailStr = "Times New Roman, 9pt",
+                FontInputFontStr = "Courier New, 10pt",
+                UseUnifiedPostFont = true,
+                UnifiedPostFontStr = "Tahoma, 11pt",
+            };
+
+            using var themeManager = new ThemeManager(settings);
+
+            Assert.Equal("Tahoma", themeManager.FontUnread.Name);
+            Assert.Equal(11, themeManager.FontUnread.SizeInPoints);
+            Assert.True(themeManager.FontUnread.Bold);
+            Assert.True(themeManager.FontUnread.Underline);
+            Assert.Equal("Tahoma", themeManager.FontReaded.Name);
+            Assert.Equal(11, themeManager.FontReaded.SizeInPoints);
+            Assert.Equal("Tahoma", themeManager.FontDetail.Name);
+            Assert.Equal(11, themeManager.FontDetail.SizeInPoints);
+            Assert.Equal("Tahoma", themeManager.FontInputFont.Name);
+            Assert.Equal(11, themeManager.FontInputFont.SizeInPoints);
+        }
+
+        [Fact]
+        public void UnifiedPostFontCanBeBypassedForEditingIndividualSettingsTest()
+        {
+            var settings = new SettingLocal
+            {
+                FontReadStr = "Arial, 8pt",
+                FontDetailStr = "Times New Roman, 9pt",
+                FontInputFontStr = "Courier New, 10pt",
+                UseUnifiedPostFont = true,
+                UnifiedPostFontStr = "Tahoma, 11pt",
+            };
+
+            using var themeManager = new ThemeManager(settings, applyUnifiedPostFont: false);
+
+            Assert.Equal(8, themeManager.FontReaded.SizeInPoints);
+            Assert.Equal(9, themeManager.FontDetail.SizeInPoints);
+            Assert.Equal(10, themeManager.FontInputFont.SizeInPoints);
+        }
+
+        [Fact]
         public void ColorDefaultTest()
         {
             var settings = new SettingLocal();

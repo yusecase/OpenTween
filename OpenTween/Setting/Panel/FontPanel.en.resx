@@ -13,7 +13,10 @@
 	<data name="btnOWL.Text"><value>Fore...</value></data>
 	<data name="btnRetweet.Text"><value>Fore...</value></data>
 	<data name="btnUnread.Text"><value>Font&amp;&amp;Fore...</value></data>
+	<data name="BtnUnifiedPostFont.Text"><value>Select...</value></data>
 	<data name="ButtonBackToDefaultFontColor.Text"><value>Back to Default</value></data>
+	<data name="CheckUnifiedPostFont.Size" type="System.Drawing.Size, System.Drawing"><value>151, 16</value></data>
+	<data name="CheckUnifiedPostFont.Text"><value>Use one font for posts</value></data>
 	<data name="checkBoxUseTwemoji.Size" type="System.Drawing.Size, System.Drawing"><value>211, 16</value></data>
 	<data name="checkBoxUseTwemoji.Text"><value>Render emoji as an image (Twemoji)</value></data>
 	<data name="GroupBox1.Text"><value>Font &amp;&amp; Color</value></data>

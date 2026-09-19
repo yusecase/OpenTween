@@ -16,6 +16,18 @@
 	<data name="&gt;&gt;btnDetail.Parent"><value>GroupBox1</value></data>
 	<data name="&gt;&gt;btnDetail.Type"><value>System.Windows.Forms.Button, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
 	<data name="&gt;&gt;btnDetail.ZOrder"><value>13</value></data>
+	<data name="&gt;&gt;BtnUnifiedPostFont.Name"><value>BtnUnifiedPostFont</value></data>
+	<data name="&gt;&gt;BtnUnifiedPostFont.Parent"><value>GroupBox1</value></data>
+	<data name="&gt;&gt;BtnUnifiedPostFont.Type"><value>System.Windows.Forms.Button, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;BtnUnifiedPostFont.ZOrder"><value>0</value></data>
+	<data name="&gt;&gt;CheckUnifiedPostFont.Name"><value>CheckUnifiedPostFont</value></data>
+	<data name="&gt;&gt;CheckUnifiedPostFont.Parent"><value>GroupBox1</value></data>
+	<data name="&gt;&gt;CheckUnifiedPostFont.Type"><value>System.Windows.Forms.CheckBox, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;CheckUnifiedPostFont.ZOrder"><value>2</value></data>
+	<data name="&gt;&gt;lblUnifiedPostFont.Name"><value>lblUnifiedPostFont</value></data>
+	<data name="&gt;&gt;lblUnifiedPostFont.Parent"><value>GroupBox1</value></data>
+	<data name="&gt;&gt;lblUnifiedPostFont.Type"><value>System.Windows.Forms.Label, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
+	<data name="&gt;&gt;lblUnifiedPostFont.ZOrder"><value>1</value></data>
 	<data name="&gt;&gt;btnDetailBack.Name"><value>btnDetailBack</value></data>
 	<data name="&gt;&gt;btnDetailBack.Parent"><value>GroupBox1</value></data>
 	<data name="&gt;&gt;btnDetailBack.Type"><value>System.Windows.Forms.Button, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></data>
@@ -179,11 +191,24 @@
 	<data name="ButtonBackToDefaultFontColor.Anchor" type="System.Windows.Forms.AnchorStyles, System.Windows.Forms"><value>Bottom</value></data>
 	<data name="ButtonBackToDefaultFontColor.AutoSize" type="System.Boolean, mscorlib"><value>True</value></data>
 	<data name="ButtonBackToDefaultFontColor.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms"><value>NoControl</value></data>
-	<data name="ButtonBackToDefaultFontColor.Location" type="System.Drawing.Point, System.Drawing"><value>180, 304</value></data>
+	<data name="ButtonBackToDefaultFontColor.Location" type="System.Drawing.Point, System.Drawing"><value>5, 304</value></data>
 	<data name="ButtonBackToDefaultFontColor.Margin" type="System.Windows.Forms.Padding, System.Windows.Forms"><value>10, 10, 10, 10</value></data>
 	<data name="ButtonBackToDefaultFontColor.Size" type="System.Drawing.Size, System.Drawing"><value>112, 25</value></data>
 	<data name="ButtonBackToDefaultFontColor.TabIndex" type="System.Int32, mscorlib"><value>25</value></data>
 	<data name="ButtonBackToDefaultFontColor.Text"><value>デフォルトに戻す</value></data>
+	<data name="BtnUnifiedPostFont.Anchor" type="System.Windows.Forms.AnchorStyles, System.Windows.Forms"><value>Bottom, Right</value></data>
+	<data name="BtnUnifiedPostFont.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms"><value>NoControl</value></data>
+	<data name="BtnUnifiedPostFont.Location" type="System.Drawing.Point, System.Drawing"><value>384, 304</value></data>
+	<data name="BtnUnifiedPostFont.Size" type="System.Drawing.Size, System.Drawing"><value>76, 25</value></data>
+	<data name="BtnUnifiedPostFont.TabIndex" type="System.Int32, mscorlib"><value>28</value></data>
+	<data name="BtnUnifiedPostFont.Text"><value>選択...</value></data>
+	<data name="CheckUnifiedPostFont.Anchor" type="System.Windows.Forms.AnchorStyles, System.Windows.Forms"><value>Bottom, Left</value></data>
+	<data name="CheckUnifiedPostFont.AutoSize" type="System.Boolean, mscorlib"><value>True</value></data>
+	<data name="CheckUnifiedPostFont.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms"><value>NoControl</value></data>
+	<data name="CheckUnifiedPostFont.Location" type="System.Drawing.Point, System.Drawing"><value>125, 309</value></data>
+	<data name="CheckUnifiedPostFont.Size" type="System.Drawing.Size, System.Drawing"><value>168, 16</value></data>
+	<data name="CheckUnifiedPostFont.TabIndex" type="System.Int32, mscorlib"><value>26</value></data>
+	<data name="CheckUnifiedPostFont.Text"><value>投稿フォントを一括指定</value></data>
 	<data name="checkBoxUseTwemoji.AutoSize" type="System.Boolean, mscorlib"><value>True</value></data>
 	<data name="checkBoxUseTwemoji.Location" type="System.Drawing.Point, System.Drawing"><value>248, 208</value></data>
 	<data name="checkBoxUseTwemoji.Size" type="System.Drawing.Size, System.Drawing"><value>200, 16</value></data>
@@ -276,6 +301,13 @@
 	<data name="lblListFont.TabIndex" type="System.Int32, mscorlib"><value>1</value></data>
 	<data name="lblListFont.Text"><value>This is sample.</value></data>
 	<data name="lblListFont.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing"><value>MiddleLeft</value></data>
+	<data name="lblUnifiedPostFont.Anchor" type="System.Windows.Forms.AnchorStyles, System.Windows.Forms"><value>Bottom, Right</value></data>
+	<data name="lblUnifiedPostFont.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms"><value>NoControl</value></data>
+	<data name="lblUnifiedPostFont.Location" type="System.Drawing.Point, System.Drawing"><value>306, 307</value></data>
+	<data name="lblUnifiedPostFont.Size" type="System.Drawing.Size, System.Drawing"><value>72, 19</value></data>
+	<data name="lblUnifiedPostFont.TabIndex" type="System.Int32, mscorlib"><value>27</value></data>
+	<data name="lblUnifiedPostFont.Text"><value>Aa</value></data>
+	<data name="lblUnifiedPostFont.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing"><value>MiddleCenter</value></data>
 	<data name="lblOWL.Anchor" type="System.Windows.Forms.AnchorStyles, System.Windows.Forms"><value>Top, Right</value></data>
 	<data name="lblOWL.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms"><value>NoControl</value></data>
 	<data name="lblOWL.Location" type="System.Drawing.Point, System.Drawing"><value>248, 118</value></data>

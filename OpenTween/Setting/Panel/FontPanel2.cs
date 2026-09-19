@@ -80,7 +80,7 @@ namespace OpenTween.Setting.Panel
 
         private void UpdateTheme(SettingLocal settingLocal)
         {
-            var newTheme = new ThemeManager(settingLocal);
+            var newTheme = new ThemeManager(settingLocal, applyUnifiedPostFont: false);
             (var oldTheme, this.currentTheme) = (this.currentTheme, newTheme);
             oldTheme.Dispose();
         }

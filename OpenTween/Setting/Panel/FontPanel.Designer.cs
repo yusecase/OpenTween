@@ -17,6 +17,9 @@
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FontPanel));
             this.GroupBox1 = new System.Windows.Forms.GroupBox();
+            this.BtnUnifiedPostFont = new System.Windows.Forms.Button();
+            this.lblUnifiedPostFont = new System.Windows.Forms.Label();
+            this.CheckUnifiedPostFont = new System.Windows.Forms.CheckBox();
             this.btnRetweet = new System.Windows.Forms.Button();
             this.lblRetweet = new System.Windows.Forms.Label();
             this.Label80 = new System.Windows.Forms.Label();
@@ -48,6 +51,9 @@
             // 
             // GroupBox1
             // 
+            this.GroupBox1.Controls.Add(this.BtnUnifiedPostFont);
+            this.GroupBox1.Controls.Add(this.lblUnifiedPostFont);
+            this.GroupBox1.Controls.Add(this.CheckUnifiedPostFont);
             this.GroupBox1.Controls.Add(this.btnRetweet);
             this.GroupBox1.Controls.Add(this.lblRetweet);
             this.GroupBox1.Controls.Add(this.Label80);
@@ -77,6 +83,26 @@
             resources.ApplyResources(this.GroupBox1, "GroupBox1");
             this.GroupBox1.Name = "GroupBox1";
             this.GroupBox1.TabStop = false;
+            //
+            // BtnUnifiedPostFont
+            //
+            resources.ApplyResources(this.BtnUnifiedPostFont, "BtnUnifiedPostFont");
+            this.BtnUnifiedPostFont.Name = "BtnUnifiedPostFont";
+            this.BtnUnifiedPostFont.UseVisualStyleBackColor = true;
+            this.BtnUnifiedPostFont.Click += new System.EventHandler(this.BtnUnifiedPostFont_Click);
+            //
+            // lblUnifiedPostFont
+            //
+            resources.ApplyResources(this.lblUnifiedPostFont, "lblUnifiedPostFont");
+            this.lblUnifiedPostFont.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
+            this.lblUnifiedPostFont.Name = "lblUnifiedPostFont";
+            //
+            // CheckUnifiedPostFont
+            //
+            resources.ApplyResources(this.CheckUnifiedPostFont, "CheckUnifiedPostFont");
+            this.CheckUnifiedPostFont.Name = "CheckUnifiedPostFont";
+            this.CheckUnifiedPostFont.UseVisualStyleBackColor = true;
+            this.CheckUnifiedPostFont.CheckedChanged += new System.EventHandler(this.CheckUnifiedPostFont_CheckedChanged);
             // 
             // btnRetweet
             // 
@@ -252,6 +278,9 @@
         #endregion
 
         internal System.Windows.Forms.GroupBox GroupBox1;
+        internal System.Windows.Forms.Button BtnUnifiedPostFont;
+        internal System.Windows.Forms.Label lblUnifiedPostFont;
+        internal System.Windows.Forms.CheckBox CheckUnifiedPostFont;
         internal System.Windows.Forms.Button btnRetweet;
         internal System.Windows.Forms.Label lblRetweet;
         internal System.Windows.Forms.Label Label80;

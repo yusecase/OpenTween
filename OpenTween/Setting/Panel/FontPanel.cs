@@ -61,6 +61,12 @@ namespace OpenTween.Setting.Panel
             this.lblDetail.ForeColor = this.currentTheme.ColorDetail;
             this.lblDetailLink.ForeColor = this.currentTheme.ColorDetailLink;
             this.checkBoxUseTwemoji.Checked = settingLocal.UseTwemoji;
+
+            var fontConverter = new FontConverter();
+            this.lblUnifiedPostFont.Font = ThemeManager.ConvertStringToFont(fontConverter, settingLocal.UnifiedPostFontStr)
+                ?? this.defaultTheme.FontReaded;
+            this.CheckUnifiedPostFont.Checked = settingLocal.UseUnifiedPostFont;
+            this.UpdateUnifiedPostFontControls();
         }
 
         public void SaveConfig(SettingLocal settingLocal)
@@ -80,11 +86,13 @@ namespace OpenTween.Setting.Panel
             settingLocal.ColorDetailStr = ThemeManager.ConvertColorToString(colorConverter, this.lblDetail.ForeColor, this.defaultTheme.ColorDetail);
             settingLocal.ColorDetailLinkStr = ThemeManager.ConvertColorToString(colorConverter, this.lblDetailLink.ForeColor, this.defaultTheme.ColorDetailLink);
             settingLocal.UseTwemoji = this.checkBoxUseTwemoji.Checked;
+            settingLocal.UseUnifiedPostFont = this.CheckUnifiedPostFont.Checked;
+            settingLocal.UnifiedPostFontStr = ThemeManager.ConvertFontToString(fontConverter, this.lblUnifiedPostFont.Font, this.defaultTheme.FontReaded);
         }
 
         private void UpdateTheme(SettingLocal settingLocal)
         {
-            var newTheme = new ThemeManager(settingLocal);
+            var newTheme = new ThemeManager(settingLocal, applyUnifiedPostFont: false);
             (var oldTheme, this.currentTheme) = (this.currentTheme, newTheme);
             oldTheme.Dispose();
         }
@@ -103,6 +111,9 @@ namespace OpenTween.Setting.Panel
             this.lblDetailBackcolor.BackColor = this.defaultTheme.ColorDetailBackcolor;
             this.lblDetailLink.ForeColor = this.defaultTheme.ColorDetailLink;
             this.lblRetweet.ForeColor = this.defaultTheme.ColorRetweet;
+            this.CheckUnifiedPostFont.Checked = false;
+            this.lblUnifiedPostFont.Font = this.defaultTheme.FontReaded;
+            this.UpdateUnifiedPostFontControls();
         }
 
         private void BtnListFont_Click(object sender, EventArgs e)
@@ -128,6 +139,31 @@ namespace OpenTween.Setting.Panel
 
         private void BtnDetailBack_Click(object sender, EventArgs e)
             => this.ShowBackColorDialog(this.lblDetailBackcolor);
+
+        private void CheckUnifiedPostFont_CheckedChanged(object sender, EventArgs e)
+            => this.UpdateUnifiedPostFontControls();
+
+        private void BtnUnifiedPostFont_Click(object sender, EventArgs e)
+        {
+            var dialog = ((AppendSettingDialog)this.ParentForm).FontDialog1;
+            var showColor = dialog.ShowColor;
+
+            try
+            {
+                dialog.ShowColor = false;
+                this.ShowFontDialog(this.lblUnifiedPostFont);
+            }
+            finally
+            {
+                dialog.ShowColor = showColor;
+            }
+        }
+
+        private void UpdateUnifiedPostFontControls()
+        {
+            this.lblUnifiedPostFont.Enabled = this.CheckUnifiedPostFont.Checked;
+            this.BtnUnifiedPostFont.Enabled = this.CheckUnifiedPostFont.Checked;
+        }
 
         protected override void Dispose(bool disposing)
         {

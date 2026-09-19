@@ -124,25 +124,39 @@ namespace OpenTween
         /// <summary>Listにフォーカスがないときの選択行の背景色</summary>
         public Brush BrushDeactiveSelection { get; }
 
-        public ThemeManager(SettingLocal settingLocal)
+        public ThemeManager(SettingLocal settingLocal, bool applyUnifiedPostFont = true)
         {
             var fontConverter = new FontConverter();
 
-            this.FontUnread = ConvertStringToFont(fontConverter, settingLocal.FontUnreadStr)
+            var fontUnread = ConvertStringToFont(fontConverter, settingLocal.FontUnreadStr)
                 ?? new(SystemFonts.DefaultFont, FontStyle.Bold | FontStyle.Underline);
 
+            var fontReaded = ConvertStringToFont(fontConverter, settingLocal.FontReadStr)
+                ?? SystemFonts.DefaultFont;
+
+            var fontDetail = ConvertStringToFont(fontConverter, settingLocal.FontDetailStr)
+                ?? SystemFonts.DefaultFont;
+
+            var fontInput = ConvertStringToFont(fontConverter, settingLocal.FontInputFontStr)
+                ?? SystemFonts.DefaultFont;
+
+            Font? unifiedPostFont = null;
+            if (applyUnifiedPostFont && settingLocal.UseUnifiedPostFont)
+            {
+                unifiedPostFont = ConvertStringToFont(fontConverter, settingLocal.UnifiedPostFontStr)
+                    ?? SystemFonts.DefaultFont;
+            }
+
+            this.FontUnread = ApplyUnifiedPostFont(fontUnread, unifiedPostFont);
             this.FontUnreadBold = new(this.FontUnread, FontStyle.Bold);
 
-            this.FontReaded = ConvertStringToFont(fontConverter, settingLocal.FontReadStr)
-                ?? SystemFonts.DefaultFont;
-
+            this.FontReaded = ApplyUnifiedPostFont(fontReaded, unifiedPostFont);
             this.FontReadedBold = new(this.FontReaded, FontStyle.Bold);
 
-            this.FontDetail = ConvertStringToFont(fontConverter, settingLocal.FontDetailStr)
-                ?? SystemFonts.DefaultFont;
+            this.FontDetail = ApplyUnifiedPostFont(fontDetail, unifiedPostFont);
+            this.FontInputFont = ApplyUnifiedPostFont(fontInput, unifiedPostFont);
 
-            this.FontInputFont = ConvertStringToFont(fontConverter, settingLocal.FontInputFontStr)
-                ?? SystemFonts.DefaultFont;
+            unifiedPostFont?.Dispose();
 
             var colorConverter = new ColorConverter();
 
@@ -208,6 +222,23 @@ namespace OpenTween
             this.BrushListBackcolor = new SolidBrush(this.ColorListBackcolor);
             this.BrushHighLight = new SolidBrush(Color.FromKnownColor(KnownColor.Highlight));
             this.BrushDeactiveSelection = new SolidBrush(Color.FromKnownColor(KnownColor.ButtonFace));
+        }
+
+        private static Font ApplyUnifiedPostFont(Font originalFont, Font? unifiedFont)
+        {
+            if (unifiedFont == null)
+                return originalFont;
+
+            var font = new Font(
+                unifiedFont.FontFamily,
+                unifiedFont.Size,
+                unifiedFont.Style | originalFont.Style,
+                unifiedFont.Unit,
+                unifiedFont.GdiCharSet,
+                unifiedFont.GdiVerticalFont);
+
+            originalFont.Dispose();
+            return font;
         }
 
         public void Dispose()

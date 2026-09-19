@@ -211,6 +211,10 @@ namespace OpenTween
 
         public string? FontInputFontStr { get; set; }
 
+        public bool UseUnifiedPostFont { get; set; } = false;
+
+        public string? UnifiedPostFontStr { get; set; }
+
         public string? ColorListBackcolorStr { get; set; }
 
         public string? ColorDetailBackcolorStr { get; set; }
