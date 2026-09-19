@@ -1,9 +1,7 @@
 name: Build reproducible zip archive
 
 on:
-  push:
-    branches: ['develop', 'release']
-  pull_request:
+  workflow_dispatch:
 
 env:
   NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages

@@ -7,3 +7,27 @@
 /coverage.xml
 Thumbs.db
 *.VisualState.xml
+
+# Local builds, credentials, runtime profiles and experiments
+**/bin/
+**/obj/
+/.dotnet/
+/.dotnet-home/
+/.nuget/
+/release/
+/dotnet-install.ps1
+/tools/NtfyPoc/
+/tools/SearchTimelineWebView2Poc/
+**/Setting*.xml
+**/ErrorLogs/
+**/*.log
+**/*.har
+**/*.dmp
+**/*.exe.WebView2/
+.env
+.env.*
+*.pfx
+*.p12
+SearchTimeline-*.json
+**/TestResults/
+*.trx

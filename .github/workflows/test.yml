@@ -1,9 +1,7 @@
 name: Run tests
 
 on:
-  push:
-    branches: ['develop', 'release']
-  pull_request:
+  workflow_dispatch:
 
 env:
   NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
@@ -97,8 +95,3 @@ jobs:
           if ($p.ExitCode -ne 0) {
             exit $p.ExitCode
           }
-
-      - uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: true
