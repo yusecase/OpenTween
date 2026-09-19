@@ -21,6 +21,9 @@
 
 #nullable enable
 
+using System.Runtime.Serialization.Json;
+using System.Text;
+using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 using OpenTween.Models;
@@ -48,6 +51,17 @@ namespace OpenTween.Api.GraphQL
                 : null;
 
             return new(tweets, cursorTop, cursorBottom);
+        }
+
+        public static TimelineGraphqlResponse ParseJson(string responseJson)
+        {
+            var responseBytes = Encoding.UTF8.GetBytes(responseJson);
+            using var jsonReader = JsonReaderWriterFactory.CreateJsonReader(
+                responseBytes,
+                XmlDictionaryReaderQuotas.Max
+            );
+
+            return Parse(XElement.Load(jsonReader));
         }
     }
 }

@@ -63,7 +63,9 @@ namespace OpenTween.Api.GraphQL
 
         public static TwitterUser ParseUser(XElement userElm)
         {
-            var userLegacyElm = userElm.Element("legacy") ?? throw CreateParseError();
+            var userLegacyElm = userElm.Element("legacy");
+            if (userLegacyElm == null)
+                return ParseModernUser(userElm);
 
             static string GetText(XElement elm, string name)
                 => elm.Element(name)?.Value ?? throw CreateParseError();
@@ -113,6 +115,51 @@ namespace OpenTween.Api.GraphQL
                             })
                             .ToArray(),
                     },
+                },
+            };
+        }
+
+        private static TwitterUser ParseModernUser(XElement userElm)
+        {
+            var coreElm = userElm.Element("core") ?? throw CreateParseError();
+            var profileBioElm = userElm.Element("profile_bio");
+            var relationshipCountsElm = userElm.Element("relationship_counts");
+            var tweetCountsElm = userElm.Element("tweet_counts");
+            var actionCountsElm = userElm.Element("action_counts");
+
+            static string GetText(XElement elm, string name)
+                => elm.Element(name)?.Value ?? throw CreateParseError();
+
+            static string? GetTextOrNull(XElement? elm, string name)
+                => elm?.Element(name)?.Value;
+
+            static int GetIntOrZero(XElement? elm, string name)
+                => int.TryParse(GetTextOrNull(elm, name), out var value) ? value : 0;
+
+            static bool GetBoolOrFalse(XElement? elm, string name)
+                => GetTextOrNull(elm, name) == "true";
+
+            return new()
+            {
+                IdStr = GetText(userElm, "rest_id"),
+                Name = GetText(coreElm, "name"),
+                ProfileImageUrlHttps = GetTextOrNull(userElm.Element("avatar"), "image_url"),
+                ScreenName = GetText(coreElm, "screen_name"),
+                Protected = GetBoolOrFalse(userElm.Element("privacy"), "protected"),
+                Verified = GetBoolOrFalse(userElm.Element("verification"), "verified"),
+                CreatedAt = GetText(coreElm, "created_at"),
+                FollowersCount = GetIntOrZero(relationshipCountsElm, "followers"),
+                FriendsCount = GetIntOrZero(relationshipCountsElm, "following"),
+                FavouritesCount = GetIntOrZero(actionCountsElm, "favorites_count"),
+                StatusesCount = GetIntOrZero(tweetCountsElm, "tweets"),
+                Description = GetTextOrNull(profileBioElm, "description"),
+                Location = GetTextOrNull(userElm.Element("location"), "location"),
+                Url = GetTextOrNull(userElm.Element("website"), "url"),
+                ProfileBannerUrl = GetTextOrNull(userElm.Element("banner"), "image_url") ?? "",
+                Entities = new()
+                {
+                    Description = new(),
+                    Url = new(),
                 },
             };
         }

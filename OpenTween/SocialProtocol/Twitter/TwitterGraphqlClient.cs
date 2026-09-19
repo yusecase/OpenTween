@@ -30,8 +30,11 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using OpenTween.Api;
+using OpenTween.Api.DataModel;
 using OpenTween.Api.GraphQL;
 using OpenTween.Api.TwitterV2;
+using OpenTween.Connection;
 using OpenTween.Models;
 using OpenTween.Setting;
 
@@ -200,7 +203,7 @@ namespace OpenTween.SocialProtocol.Twitter
                 Cursor = cursor?.As<TwitterGraphqlCursor>(),
             };
 
-            var response = await request.Send(this.account.Connection)
+            var response = await this.GetSearchTimelineResponse(request, query, count)
                 .ConfigureAwait(false);
 
             var statuses = response.ToTwitterStatuses();
@@ -213,6 +216,61 @@ namespace OpenTween.SocialProtocol.Twitter
             posts = filter.Run(posts);
 
             return new(posts, cursorTop, cursorBottom);
+        }
+
+        private async Task<TimelineGraphqlResponse> GetSearchTimelineResponse(SearchTimelineRequest request, string query, int count)
+        {
+            var rawCookie = this.GetTwitterComCookie();
+            if (rawCookie == null)
+                return await request.Send(this.account.Connection).ConfigureAwait(false);
+
+            try
+            {
+                return await this.GetSearchTimelineByWebView2(rawCookie, query, count)
+                    .ConfigureAwait(false);
+            }
+            catch (WebApiException webViewException)
+            {
+                MyCommon.TraceOut($"WebView2 SearchTimeline failed. Trying direct GraphQL request: {webViewException.Message}");
+
+                try
+                {
+                    return await request.Send(this.account.Connection)
+                        .ConfigureAwait(false);
+                }
+                catch (Exception directException)
+                {
+                    throw new WebApiException(
+                        $"WebView2 search failed: {webViewException.Message}; direct GraphQL fallback failed: {directException.Message}",
+                        new AggregateException(webViewException, directException));
+                }
+            }
+        }
+
+        private async Task<TimelineGraphqlResponse> GetSearchTimelineByWebView2(string rawCookie, string query, int count)
+        {
+            var fetcher = new SearchTimelineWebView2Fetcher();
+            this.account.AccountState.RateLimits[SearchTimelineRequest.EndpointName] = null;
+
+            var response = await fetcher.FetchAsync(rawCookie, query, count)
+                .ConfigureAwait(false);
+
+            // WebView2 fetches the first browser search page and does not consume OpenTween's GraphQL endpoint quota.
+            this.account.AccountState.RateLimits[SearchTimelineRequest.EndpointName] = null;
+            return response with { CursorTop = null, CursorBottom = null };
+        }
+
+        private string? GetTwitterComCookie()
+        {
+            if (this.account.Connection is not TwitterApiConnection connection)
+                return null;
+
+            if (connection.Credential is not TwitterCredentialCookie credential)
+                return null;
+
+            return MyCommon.IsNullOrEmpty(credential.AppToken.TwitterComCookie)
+                ? null
+                : credential.AppToken.TwitterComCookie;
         }
 
         public async Task<PostClass[]> GetRelatedPosts(PostClass targetPost, bool firstLoad)

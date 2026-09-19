@@ -28,9 +28,12 @@ namespace OpenTween.Api.GraphQL
 {
     public class SearchTimelineRequestTest
     {
+        private const string QueryIdEnvironmentVariable = "OPENTWEEN_TWITTER_QID_SEARCH_TIMELINE";
+
         [Fact]
         public async Task Send_Test()
         {
+            using var env = new TemporaryEnvironmentVariable(QueryIdEnvironmentVariable, null);
             using var apiResponse = await TestUtils.CreateApiResponse("Resources/Responses/SearchTimeline_SimpleTweet.json");
 
             var mock = new Mock<IApiConnection>();
@@ -40,11 +43,12 @@ namespace OpenTween.Api.GraphQL
                 .Callback<IHttpRequest>(x =>
                 {
                     var request = Assert.IsType<GetRequest>(x);
-                    Assert.Equal(new("https://twitter.com/i/api/graphql/lZ0GCEojmtQfiUQa5oJSEw/SearchTimeline"), request.RequestUri);
+                    Assert.Equal(new("https://twitter.com/i/api/graphql/GcXk9vN_d1jUfHNqLacXQA/SearchTimeline"), request.RequestUri);
                     var query = request.Query!;
-                    Assert.Equal(2, query.Count);
-                    Assert.Equal("""{"rawQuery":"#OpenTween","count":20,"product":"Latest"}""", query["variables"]);
+                    Assert.Equal(3, query.Count);
+                    Assert.Equal("""{"rawQuery":"#OpenTween","count":20,"querySource":"typed_query","product":"Latest"}""", query["variables"]);
                     Assert.True(query.ContainsKey("features"));
+                    Assert.Equal("""{"withArticleRichContentState":false}""", query["fieldToggles"]);
                     Assert.Equal("SearchTimeline", request.EndpointName);
                 })
                 .ReturnsAsync(apiResponse);
@@ -65,6 +69,7 @@ namespace OpenTween.Api.GraphQL
         [Fact]
         public async Task Send_ReplaceCursorTest()
         {
+            using var env = new TemporaryEnvironmentVariable(QueryIdEnvironmentVariable, null);
             using var apiResponse = await TestUtils.CreateApiResponse("Resources/Responses/SearchTimeline_ReplaceCursor.json");
 
             var mock = new Mock<IApiConnection>();
@@ -87,6 +92,7 @@ namespace OpenTween.Api.GraphQL
         [Fact]
         public async Task Send_RequestCursor_Test()
         {
+            using var env = new TemporaryEnvironmentVariable(QueryIdEnvironmentVariable, null);
             using var apiResponse = await TestUtils.CreateApiResponse("Resources/Responses/SearchTimeline_SimpleTweet.json");
 
             var mock = new Mock<IApiConnection>();
@@ -96,11 +102,12 @@ namespace OpenTween.Api.GraphQL
                 .Callback<IHttpRequest>(x =>
                 {
                     var request = Assert.IsType<GetRequest>(x);
-                    Assert.Equal(new("https://twitter.com/i/api/graphql/lZ0GCEojmtQfiUQa5oJSEw/SearchTimeline"), request.RequestUri);
+                    Assert.Equal(new("https://twitter.com/i/api/graphql/GcXk9vN_d1jUfHNqLacXQA/SearchTimeline"), request.RequestUri);
                     var query = request.Query!;
-                    Assert.Equal(2, query.Count);
-                    Assert.Equal("""{"rawQuery":"#OpenTween","count":20,"product":"Latest","cursor":"aaa"}""", query["variables"]);
+                    Assert.Equal(3, query.Count);
+                    Assert.Equal("""{"rawQuery":"#OpenTween","count":20,"querySource":"typed_query","product":"Latest","cursor":"aaa"}""", query["variables"]);
                     Assert.True(query.ContainsKey("features"));
+                    Assert.Equal("""{"withArticleRichContentState":false}""", query["fieldToggles"]);
                     Assert.Equal("SearchTimeline", request.EndpointName);
                 })
                 .ReturnsAsync(apiResponse);
@@ -113,6 +120,46 @@ namespace OpenTween.Api.GraphQL
 
             await request.Send(mock.Object);
             mock.VerifyAll();
+        }
+
+        [Fact]
+        public async Task Send_QueryIdEnvironmentVariable_Test()
+        {
+            using var env = new TemporaryEnvironmentVariable(QueryIdEnvironmentVariable, "custom_query_id");
+            using var apiResponse = await TestUtils.CreateApiResponse("Resources/Responses/SearchTimeline_SimpleTweet.json");
+
+            var mock = new Mock<IApiConnection>();
+            mock.Setup(x => x.SendAsync(It.IsAny<IHttpRequest>()))
+                .Callback<IHttpRequest>(x =>
+                {
+                    var request = Assert.IsType<GetRequest>(x);
+                    Assert.Equal(new("https://twitter.com/i/api/graphql/custom_query_id/SearchTimeline"), request.RequestUri);
+                })
+                .ReturnsAsync(apiResponse);
+
+            var request = new SearchTimelineRequest(rawQuery: "#OpenTween")
+            {
+                Count = 20,
+            };
+
+            await request.Send(mock.Object);
+            mock.VerifyAll();
+        }
+
+        private sealed class TemporaryEnvironmentVariable : System.IDisposable
+        {
+            private readonly string name;
+            private readonly string? originalValue;
+
+            public TemporaryEnvironmentVariable(string name, string? value)
+            {
+                this.name = name;
+                this.originalValue = System.Environment.GetEnvironmentVariable(name);
+                System.Environment.SetEnvironmentVariable(name, value);
+            }
+
+            public void Dispose()
+                => System.Environment.SetEnvironmentVariable(this.name, this.originalValue);
         }
     }
 }

@@ -66,5 +66,63 @@ namespace OpenTween.Api.GraphQL
             Assert.Null(urlEntity.DisplayUrl);
             Assert.Null(urlEntity.ExpandedUrl);
         }
+
+        [Fact]
+        public void ToTwitterUser_ModernUserTest()
+        {
+            var userElm = XElement.Parse("""
+                <root type="object">
+                  <__typename type="string">User</__typename>
+                  <rest_id type="string">123456789</rest_id>
+                  <avatar type="object">
+                    <image_url type="string">https://pbs.twimg.com/profile_images/example_normal.jpg</image_url>
+                  </avatar>
+                  <banner type="object">
+                    <image_url type="string">https://pbs.twimg.com/profile_banners/example</image_url>
+                  </banner>
+                  <core type="object">
+                    <created_at type="string">Thu Nov 06 08:28:18 +0000 2025</created_at>
+                    <name type="string">テストユーザー</name>
+                    <screen_name type="string">example_user</screen_name>
+                  </core>
+                  <privacy type="object">
+                    <protected type="boolean">false</protected>
+                  </privacy>
+                  <verification type="object">
+                    <verified type="boolean">false</verified>
+                  </verification>
+                  <profile_bio type="object">
+                    <description type="string">テスト用プロフィール</description>
+                  </profile_bio>
+                  <location type="object">
+                    <location type="string">Japan</location>
+                  </location>
+                  <website type="object">
+                    <url type="string">https://example.com/</url>
+                  </website>
+                  <relationship_counts type="object">
+                    <followers type="number">72</followers>
+                    <following type="number">453</following>
+                  </relationship_counts>
+                  <action_counts type="object">
+                    <favorites_count type="number">667</favorites_count>
+                  </action_counts>
+                  <tweet_counts type="object">
+                    <tweets type="number">1014</tweets>
+                  </tweet_counts>
+                </root>
+                """);
+
+            var graphqlUser = new TwitterGraphqlUser(userElm);
+            var user = graphqlUser.ToTwitterUser();
+
+            Assert.Equal("123456789", user.IdStr);
+            Assert.Equal("example_user", user.ScreenName);
+            Assert.Equal("テストユーザー", user.Name);
+            Assert.Equal(72, user.FollowersCount);
+            Assert.Equal(453, user.FriendsCount);
+            Assert.Equal(667, user.FavouritesCount);
+            Assert.Equal(1014, user.StatusesCount);
+        }
     }
 }

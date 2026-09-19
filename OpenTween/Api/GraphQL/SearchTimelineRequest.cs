@@ -32,7 +32,7 @@ namespace OpenTween.Api.GraphQL
     {
         public static readonly string EndpointName = "SearchTimeline";
 
-        private static readonly Uri EndpointUri = new("https://twitter.com/i/api/graphql/lZ0GCEojmtQfiUQa5oJSEw/SearchTimeline");
+        private const string DefaultQueryId = "GcXk9vN_d1jUfHNqLacXQA";
 
         public string RawQuery { get; set; }
 
@@ -43,6 +43,18 @@ namespace OpenTween.Api.GraphQL
         public SearchTimelineRequest(string rawQuery)
             => this.RawQuery = rawQuery;
 
+        private static Uri EndpointUri
+        {
+            get
+            {
+                var queryId = Environment.GetEnvironmentVariable("OPENTWEEN_TWITTER_QID_SEARCH_TIMELINE");
+                if (MyCommon.IsNullOrEmpty(queryId))
+                    queryId = DefaultQueryId;
+
+                return new($"https://twitter.com/i/api/graphql/{Uri.EscapeDataString(queryId)}/SearchTimeline");
+            }
+        }
+
         public Dictionary<string, string> CreateParameters()
         {
             var cursorStr = this.Cursor?.Value;
@@ -52,31 +64,39 @@ namespace OpenTween.Api.GraphQL
                 ["variables"] = "{" +
                     $@"""rawQuery"":""{JsonUtils.EscapeJsonString(this.RawQuery)}""," +
                     $@"""count"":{this.Count}," +
+                    @"""querySource"":""typed_query""," +
                     $@"""product"":""Latest""" +
                     (cursorStr != null ? $@",""cursor"":""{JsonUtils.EscapeJsonString(cursorStr)}""" : "") +
                     "}",
                 ["features"] = "{" +
                     @"""responsive_web_graphql_exclude_directive_enabled"":true," +
                     @"""verified_phone_label_enabled"":false," +
-                    @"""responsive_web_home_pinned_timelines_enabled"":true," +
-                    @"""creator_subscriptions_tweet_preview_api_enabled"":true," +
                     @"""responsive_web_graphql_timeline_navigation_enabled"":true," +
                     @"""responsive_web_graphql_skip_user_profile_image_extensions_enabled"":false," +
-                    @"""c9s_tweet_anatomy_moderator_badge_enabled"":true," +
+                    @"""creator_subscriptions_tweet_preview_api_enabled"":true," +
                     @"""tweetypie_unmention_optimization_enabled"":true," +
                     @"""responsive_web_edit_tweet_api_enabled"":true," +
                     @"""graphql_is_translatable_rweb_tweet_is_translatable_enabled"":true," +
                     @"""view_counts_everywhere_api_enabled"":true," +
                     @"""longform_notetweets_consumption_enabled"":true," +
-                    @"""responsive_web_twitter_article_tweet_consumption_enabled"":false," +
+                    @"""responsive_web_twitter_article_tweet_consumption_enabled"":true," +
                     @"""tweet_awards_web_tipping_enabled"":false," +
                     @"""freedom_of_speech_not_reach_fetch_enabled"":true," +
                     @"""standardized_nudges_misinfo"":true," +
                     @"""tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled"":true," +
                     @"""longform_notetweets_rich_text_read_enabled"":true," +
                     @"""longform_notetweets_inline_media_enabled"":true," +
-                    @"""responsive_web_media_download_video_enabled"":false," +
-                    @"""responsive_web_enhance_cards_enabled"":false" +
+                    @"""responsive_web_enhance_cards_enabled"":false," +
+                    @"""articles_preview_enabled"":true," +
+                    @"""creator_subscriptions_quote_tweet_preview_enabled"":false," +
+                    @"""c9s_tweet_anatomy_moderator_badge_enabled"":true," +
+                    @"""responsive_web_twitter_article_notes_tab_enabled"":true," +
+                    @"""rweb_tipjar_consumption_enabled"":true," +
+                    @"""communities_web_enable_tweet_community_results_fetch"":true," +
+                    @"""rweb_video_timestamps_enabled"":true" +
+                    "}",
+                ["fieldToggles"] = "{" +
+                    @"""withArticleRichContentState"":false" +
                     "}",
             };
         }
